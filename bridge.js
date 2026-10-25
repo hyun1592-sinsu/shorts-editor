@@ -3,7 +3,7 @@
 /* =========================================================
    녹음기 연결
    - 작업 모드: 편집만 · 같이 쓰기(오른쪽에 녹음기) · 녹음만(녹음기 따로 창)
-   - 녹음기와 postMessage로 주고받음 (형식은 connect/README.md)
+   - 녹음기와 postMessage로 주고받음 (형식은 recorder/README.md)
      편집기 → 녹음기: script(장면 목록) · select(고른 장면) · voice-ok · voice-error
      녹음기 → 편집기: hello · get-script · select · voice(녹음 파일)
    - 이 편집기가 열어 둔 창(같이 쓰기 칸, 녹음만 창)이 보낸 것만 받음
@@ -12,7 +12,7 @@
 const BRIDGE_VER = 1;
 const REC_URL_KEY = 'shorts-rec-url';
 const REC_MODE_KEY = 'shorts-rec-mode';
-const REC_URL_DEFAULT = 'http://localhost:8766/';
+const REC_URL_DEFAULT = 'recorder/'; // 같은 저장소 안의 녹음기 (GitHub 페이지에서도 같은 주소로 열림)
 
 const R = {
   mode: 'edit',
@@ -203,9 +203,10 @@ function setMode(mode, { user = false } = {}) {
 
 function changeRecUrl() {
   const now = recUrl();
-  const v = prompt('녹음기 주소를 넣어 주세요.\n예) http://localhost:8766/  (숏츠작업.cmd가 이 주소로 녹음기를 켭니다)', now);
+  const v = prompt('녹음기 주소를 넣어 주세요.\n기본값: recorder/  (이 편집기 저장소 안의 녹음기)\n비워 두고 확인하면 기본값으로 돌아가요.', now);
   if (v == null) return;
   let url;
+  if (!v.trim()) { lsSet(REC_URL_KEY, ''); if (R.mode === 'both') { closeFrame(); openFrame(); } updateRecLink(); toast('기본 녹음기로 돌아갔어요.'); return; }
   try { url = new URL(v.trim(), location.href).href; } catch (e) { toast('주소 모양이 올바르지 않아요.'); return; }
   lsSet(REC_URL_KEY, url);
   if (R.mode === 'both') { closeFrame(); openFrame(); }

@@ -5,3 +5,8 @@
 *.zip
 Thumbs.db
 desktop.ini
+# 목소리 녹음(개인 음성)은 공개 저장소에 올리지 않음
+*.wav
+*.mp3
+*.m4a
+*.ogg
