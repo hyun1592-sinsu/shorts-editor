@@ -1,0 +1,7 @@
+﻿# 작업물(프로젝트/미디어/내보낸 영상)은 GitHub에 올리지 않음
+*.mp4
+*.webm
+*.mov
+*.zip
+Thumbs.db
+desktop.ini
