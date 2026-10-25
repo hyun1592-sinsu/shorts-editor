@@ -608,3 +608,32 @@ a.btn { text-decoration: none; display: inline-block; }
   .panel.right { max-height: none; overflow: visible; }
   .scene-list { overflow: visible; }
 }
+
+/* ---------- 녹음기 연결 (편집만 · 같이 쓰기 · 녹음만) ---------- */
+.mode-switch { display: flex; flex: none; background: var(--bg); border: 1px solid var(--line); border-radius: 9px; padding: 3px; gap: 2px; }
+.mode-switch button { background: transparent; border: 0; border-radius: 6px; padding: 5px 9px; color: var(--muted); font-weight: 600; white-space: nowrap; }
+.mode-switch button:hover { color: var(--text); }
+.mode-switch button.on { background: var(--panel-2); color: var(--text); box-shadow: inset 0 0 0 1px var(--accent); }
+.rec-link { color: var(--muted); font-size: 12px; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.rec-link::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #4a5366; }
+.rec-link[data-state="wait"]::before { background: #f5b942; }
+.rec-link[data-state="on"] { color: var(--text); }
+.rec-link[data-state="on"]::before { background: var(--ok); }
+.rec-dock { background: var(--panel); border-left: 1px solid var(--line); min-height: 0; display: flex; }
+.rec-dock iframe { flex: 1; width: 100%; height: 100%; border: 0; background: #fff; }
+body.mode-both .layout { grid-template-columns: 260px minmax(0, 1fr) 320px 420px; }
+@media (max-width: 1500px) {
+  body.mode-both .layout { grid-template-columns: 240px minmax(0, 1fr) 290px 380px; }
+}
+@media (max-width: 900px) {
+  body.mode-both .layout { grid-template-columns: 1fr; }
+  .rec-dock { height: 80vh; }
+}
+.top-right { gap: 8px; flex: none; }
+.aspect { flex: none; }
+.top-right > * { flex: none; }
+.btn, .aspect button { white-space: nowrap; }
+@media (max-width: 1450px) {
+  .top-right .save-status, .top-right .rec-link { font-size: 0; gap: 0; } /* 점만 보이고 글자는 툴팁으로 */
+  .aspect button { padding: 5px 7px; }
+}

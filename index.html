@@ -24,7 +24,14 @@
     <button type="button" data-ar="1:1"><i style="--w:1;--h:1"></i>1:1</button>
     <button type="button" data-ar="16:9"><i style="--w:16;--h:9"></i>16:9</button>
   </div>
+  <div class="mode-switch" role="radiogroup" aria-label="작업 모드" title="녹음기와 함께 쓰는 방법 고르기">
+    <button type="button" data-mode="edit">편집만</button>
+    <button type="button" data-mode="both">같이 쓰기</button>
+    <button type="button" data-mode="rec">녹음만</button>
+  </div>
   <div class="top-right">
+    <button type="button" id="recSettings" class="btn ghost small" title="녹음기 주소 바꾸기">녹음기 ⚙</button>
+    <span id="recLink" class="rec-link" data-state="off" title="녹음기 연결 상태">녹음기 꺼짐</span>
     <span id="saveStatus" class="save-status" data-state="saved">자동 저장됨</span>
     <button type="button" id="openProject" class="btn ghost" title="저장해 둔 프로젝트 zip 열기">불러오기</button>
     <button type="button" id="saveProject" class="btn ghost" title="작업 내용과 넣어 둔 파일을 zip 하나로 내려받기">프로젝트 저장</button>
@@ -321,6 +328,10 @@
     </div>
     <div id="sceneList" class="scene-list"></div>
   </aside>
+  <!-- 같이 쓰기: 녹음기를 오른쪽에 붙여 씀 -->
+  <aside id="recDock" class="rec-dock" hidden>
+    <iframe id="recFrame" title="녹음기" allow="microphone; autoplay"></iframe>
+  </aside>
 </main>
 
 <div id="toast" class="toast" hidden><span id="toastMsg"></span><button type="button" id="toastAct" class="toast-act" hidden></button></div>
@@ -451,5 +462,6 @@
 <script src="export.js"></script>
 <script src="project.js"></script>
 <script src="videoedit.js"></script>
+<script src="bridge.js"></script>
 </body>
 </html>

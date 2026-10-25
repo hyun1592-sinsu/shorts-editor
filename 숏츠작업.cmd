@@ -10,6 +10,15 @@ if errorlevel 1 (
   timeout /t 1 /nobreak >nul
 )
 
+rem 1-2) Recorder server on 8766 (your recorder folder; falls back to the example recorder)
+set "RECDIR=C:\Users\aaa\my-voice\recorder"
+if not exist "%RECDIR%\index.html" set "RECDIR=%~dp0connect"
+if not exist "%RECDIR%\recorder-bridge.js" copy /y "%~dp0connect\recorder-bridge.js" "%RECDIR%\" >nul
+netstat -ano | findstr /r /c:":8766 .*LISTENING" >nul
+if errorlevel 1 (
+  start "recorder-server" /min python -m http.server 8766 --bind 127.0.0.1 --directory "%RECDIR%"
+)
+
 rem 2) Editor as an app window (no address bar)
 set "EDGE=%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe"
 if not exist "%EDGE%" set "EDGE=%ProgramFiles%\Microsoft\Edge\Application\msedge.exe"

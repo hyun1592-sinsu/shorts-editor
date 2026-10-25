@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>녹음기 예시</title>
+<style>
+  :root { --bg: #0e1015; --panel: #161920; --line: #262b36; --text: #e7e9ef; --muted: #8a92a6; --accent: #ff4f6d; --ok: #3ecf8e; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 'Malgun Gothic', sans-serif; }
+  header { padding: 12px 16px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; background: var(--panel); position: sticky; top: 0; }
+  h1 { font-size: 15px; margin: 0; }
+  #status { font-size: 12px; color: var(--muted); }
+  #status.on { color: var(--ok); }
+  ol { list-style: none; margin: 0; padding: 8px; }
+  li { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; background: var(--panel); }
+  li.sel { border-color: var(--accent); }
+  li.silent { opacity: .45; }
+  .t { margin: 4px 0 8px; }
+  .no { color: var(--muted); font-size: 12px; }
+  .done { color: var(--ok); font-size: 12px; margin-left: 6px; }
+  button { background: #1d212b; color: var(--text); border: 1px solid #333a49; border-radius: 8px; padding: 6px 12px; font: inherit; font-weight: 600; cursor: pointer; }
+  button.rec { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .empty { padding: 24px 16px; color: var(--muted); }
+</style>
+</head>
+<body>
+<header><h1>녹음기 (예시)</h1><span id="status">편집기와 연결 안 됨</span></header>
+<ol id="list"></ol>
+<p class="empty" id="empty">편집기에서 「같이 쓰기」나 「녹음만」으로 열면 대본 문장이 여기에 떠요.</p>
+
+<script src="recorder-bridge.js"></script>
+<script>
+  const list = document.getElementById('list');
+  let scenes = [], selId = null, rec = null;
+
+  ShortsBridge.onStatus((on) => {
+    const s = document.getElementById('status');
+    s.textContent = on ? '편집기와 연결됨' : '편집기와 연결 안 됨';
+    s.className = on ? 'on' : '';
+  });
+  ShortsBridge.onScript((m) => { scenes = m.scenes; selId = m.selectedId; draw(); });
+  ShortsBridge.onSelect((m) => { selId = m.id; draw(); });
+
+  function draw() {
+    document.getElementById('empty').hidden = scenes.length > 0;
+    list.innerHTML = '';
+    for (const sc of scenes) {
+      const li = document.createElement('li');
+      li.className = (sc.id === selId ? 'sel ' : '') + (sc.silent ? 'silent' : '');
+      li.innerHTML = `<span class="no">${sc.no}번</span>${sc.voice ? `<span class="done">✓ 녹음됨 ${sc.voice.dur.toFixed(1)}초</span>` : ''}<div class="t"></div>`;
+      li.querySelector('.t').textContent = sc.text;
+      const b = document.createElement('button');
+      const recording = rec && rec.id === sc.id;
+      b.textContent = recording ? '■ 멈추고 넣기' : sc.voice ? '다시 녹음' : '● 녹음';
+      if (recording) b.className = 'rec';
+      b.onclick = () => (recording ? stop() : start(sc));
+      li.onclick = (e) => { if (e.target === b) return; selId = sc.id; ShortsBridge.select(sc.id); draw(); };
+      li.appendChild(b);
+      list.appendChild(li);
+    }
+  }
+
+  async function start(sc) {
+    if (rec) stop();
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+    const mr = new MediaRecorder(stream);
+    const chunks = [];
+    mr.ondataavailable = (e) => chunks.push(e.data);
+    mr.onstop = async () => {
+      stream.getTracks().forEach((t) => t.stop());
+      const blob = new Blob(chunks, { type: mr.mimeType });
+      const name = `${String(sc.no).padStart(2, '0')}_${sc.text.slice(0, 12).replace(/[\\/:*?"<>|\s]+/g, '')}.webm`;
+      if (ShortsBridge.connected) {
+        try { await ShortsBridge.sendVoice(sc.id, blob, name); }
+        catch (e) { alert('편집기에 넣지 못했어요: ' + e.message); save(blob, name); }
+      } else save(blob, name); // 혼자 쓸 때는 파일로 저장
+    };
+    rec = { id: sc.id, mr };
+    mr.start();
+    draw();
+  }
+  function stop() { if (!rec) return; rec.mr.stop(); rec = null; draw(); }
+  function save(blob, name) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  }
+</script>
+</body>
+</html>

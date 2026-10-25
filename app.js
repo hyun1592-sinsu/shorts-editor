@@ -701,6 +701,29 @@ function voiceBuffer(id) {
   return voiceBufs.get(id);
 }
 
+/* 소리 파일(Blob) 하나를 장면의 나레이션으로 넣기. 화면 갱신·저장은 부르는 쪽에서 */
+async function attachVoice(sc, blob, name) {
+  let buf;
+  try {
+    buf = await decodeAudio(await blob.arrayBuffer());
+  } catch (e) {
+    console.error(e);
+    return false;
+  }
+  const id = 'v_' + uid();
+  try {
+    await mediaPut(id, new Blob([blob], { type: blob.type || 'audio/mpeg' }));
+  } catch (e) {
+    console.error(e);
+    return false;
+  }
+  voiceBufs.set(id, Promise.resolve(buf));
+  const old = sc.voice;
+  sc.voice = { mediaId: id, name, dur: +buf.duration.toFixed(3) };
+  if (old) releaseMedia({ mediaId: old.mediaId });
+  return true;
+}
+
 /* 녹음 파일들을 파일 이름 순서대로 start번 장면부터 차례로(나레이션 없는 장면은 건너뜀) */
 async function placeVoiceFiles(fileList, start) {
   const files = [...fileList].filter(isAudioFile)
@@ -716,28 +739,8 @@ async function placeVoiceFiles(fileList, start) {
   toast('녹음 파일 불러오는 중…', null, 0);
   let ok = 0, failed = 0;
   for (let k = 0; k < targets.length; k++) {
-    const file = files[k], sc = targets[k];
-    let buf;
-    try {
-      buf = await decodeAudio(await file.arrayBuffer());
-    } catch (e) {
-      console.error(e);
-      failed++;
-      continue;
-    }
-    const id = 'v_' + uid();
-    try {
-      await mediaPut(id, new Blob([file], { type: file.type || 'audio/mpeg' }));
-    } catch (e) {
-      console.error(e);
-      failed++;
-      continue;
-    }
-    voiceBufs.set(id, Promise.resolve(buf));
-    const old = sc.voice;
-    sc.voice = { mediaId: id, name: file.name, dur: +buf.duration.toFixed(3) };
-    if (old) releaseMedia({ mediaId: old.mediaId });
-    ok++;
+    if (await attachVoice(targets[k], files[k], files[k].name)) ok++;
+    else failed++;
   }
   renderScenes();
   renderTimeline();
