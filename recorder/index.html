@@ -56,6 +56,15 @@
   .gi input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); }
   .empty { color: var(--muted); text-align: center; padding: 40px 0; }
   .note { font-size: 13px; color: var(--muted); }
+  .batch-text { width: 100%; min-height: 220px; resize: vertical; font: inherit; font-size: 15px; line-height: 1.6; padding: 12px 14px;
+    border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+  .checks { display: flex; flex-wrap: wrap; gap: 6px 14px; grid-column: 2 / 5; font-size: 14px; }
+  .checks label { display: flex; align-items: center; gap: 5px; flex: none; white-space: nowrap; }
+  .bg { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; align-items: center; }
+  .bg .tag { font-weight: 600; }
+  .bg .meta { font-size: 13px; color: var(--muted); }
+  .bg .bar { grid-column: 1 / -1; height: 6px; border-radius: 99px; background: var(--bg); overflow: hidden; }
+  .bg .bar i { display: block; height: 100%; background: var(--accent); }
   main { padding: 28px 40px; display: flex; flex-direction: column; gap: 20px; }
   aside { background: var(--panel); border-left: 1px solid var(--line); display: flex; flex-direction: column; max-height: 100vh; position: sticky; top: 0; }
 
@@ -121,6 +130,7 @@
 <nav class="tabs">
   <button data-tab="gen">음성 만들기</button>
   <button data-tab="rec">녹음하기</button>
+  <button data-tab="batch">🌙 밤샘 일괄</button>
 </nav>
 
 <div class="gen" id="genView" hidden>
@@ -158,6 +168,27 @@
       <button id="delSel" disabled>선택 삭제</button>
     </div>
     <div class="items" id="items"></div>
+  </section>
+</div>
+
+<div class="gen" id="batchView" hidden>
+  <section class="panel">
+    <h2>🌙 밤샘 일괄 만들기</h2>
+    <div class="note">대본 여러 편과 목소리 버전 여러 개를 한 번에 걸어 두면, 서버가 밤새 차례로 만들어 둬요. 다음 날 숏츠 편집기의 <b>🎙 목소리 입히기</b>에서 같은 목소리를 고르면 새로 만들지 않고 바로 들어가요.</div>
+    <textarea id="bText" class="batch-text" spellcheck="false" placeholder="# 1월 띠별 운세&#10;첫 번째 대본 문장들…&#10;---&#10;# 2월 띠별 운세&#10;두 번째 대본 문장들…"></textarea>
+    <div class="note">대본 사이는 <b>---</b> 한 줄로 나눠요. 맨 윗줄을 <b># 제목</b>으로 쓰면 이름이 붙어요. 문장은 편집기와 똑같이 나눠요.</div>
+    <div class="slider"><span>목소리</span><div class="checks" id="bVoices"></div><span></span><span></span></div>
+    <div class="slider"><span>억양</span><div class="checks" id="bStyles">
+      <label><input type="checkbox" value="calm"> 차분</label><label><input type="checkbox" value="normal" checked> 보통</label><label><input type="checkbox" value="rich"> 풍부</label>
+    </div><span></span><span></span></div>
+    <div class="slider"><span>속도</span><select id="bSpeed"><option value="0.95">0.95배</option><option value="1">1.00배</option><option value="1.05" selected>1.05배 (기본)</option><option value="1.1">1.10배</option><option value="1.2">1.20배</option></select><span></span><span></span></div>
+    <div class="note" id="bInfo"></div>
+    <button class="go" id="bGo">🌙 대기열에 걸기</button>
+    <div class="note">작업이 남아 있는 동안 PC가 절전 모드로 들어가지 않아요 (화면은 꺼져도 돼요). 이 페이지는 닫아도 되지만 <b>서버 창은 켜 두세요.</b></div>
+  </section>
+  <section class="panel">
+    <h2>버전별 진행</h2>
+    <div class="items" id="bGroups"></div>
   </section>
 </div>
 
@@ -458,6 +489,7 @@ function showTab(t) {
   tab = t;
   $("genView").hidden = t !== "gen";
   $("recView").hidden = t !== "rec";
+  $("batchView").hidden = t !== "batch";
   document.querySelectorAll("nav.tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === t));
   if (t !== "rec") stopPlay();
   try { localStorage.setItem("tab", t); } catch {}
@@ -580,7 +612,8 @@ async function refreshGen() {
   const prev = new Map(genItems.map(i => [i.id, i.status]));
   genItems = data.items;
   // Auto-play items that finish while the page is open (not ones already done on load).
-  if (seen) for (const i of genItems) if (i.status === "done" && prev.get(i.id) && prev.get(i.id) !== "done") queuePlay(i.id);
+  // 밤샘 일괄 · 편집기에서 건 줄(tag 있음)은 밤새 소리 나지 않게 자동 재생하지 않음
+  if (seen) for (const i of genItems) if (!i.tag && i.status === "done" && prev.get(i.id) && prev.get(i.id) !== "done") queuePlay(i.id);
   seen = true;
   for (const id of [...selected]) if (!genItems.some(i => i.id === id && i.status === "done")) selected.delete(id);
   renderGen(data.model);
@@ -620,6 +653,7 @@ function renderGen(model = lastModel) {
   $("saveSel").disabled = !selected.size;
   $("delSel").disabled = !selected.size;
   $("saveSel").textContent = selected.size ? `⬇ 선택 저장 (${selected.size})` : "⬇ 선택 저장";
+  renderBatch();
 }
 
 function genRow(it) {
@@ -708,6 +742,138 @@ $("saveSel").addEventListener("click", async () => {
     a.href = URL.createObjectURL(await r.blob()); a.download = "my_voice.zip"; a.click();
   }
 });
+
+// ---- 🌙 밤샘 일괄: 대본 여러 편 × 목소리 버전 여러 개를 대기열에 걸어 두기 ----
+// 문장은 숏츠 편집기(app.js splitSentences)와 똑같이 나눠야 편집기가 만들어 둔 음성을 찾아 써요.
+function splitSentences(text) {
+  const out = [];
+  const seg = typeof Intl !== "undefined" && Intl.Segmenter ? new Intl.Segmenter("ko", { granularity: "sentence" }) : null;
+  for (const line of text.split(/\r?\n+/)) {
+    const t = line.trim();
+    if (!t) continue;
+    if (seg) { for (const s of seg.segment(t)) { const x = s.segment.trim(); if (x) out.push(x); } }
+    else { for (const p of t.match(/[^.!?。！？…]+(?:[.!?。！？…]+["'”’)\]]*|$)/g) || [t]) { const x = p.trim(); if (x) out.push(x); } }
+  }
+  const merged = [];
+  for (const s of out) { if (merged.length && /^[\p{P}\s]+$/u.test(s)) merged[merged.length - 1] += s; else merged.push(s); }
+  return merged;
+}
+const normLine = t => t.replace(/\s+/g, " ").trim();
+
+function parseScripts(raw) {
+  return raw.split(/^\s*-{3,}\s*$/m).map(block => {
+    const lines = block.replace(/^\s*\n/, "").split("\n");
+    let title = "";
+    if (lines[0] && /^\s*#/.test(lines[0])) title = lines.shift().replace(/^\s*#+\s*/, "").trim();
+    const sentences = splitSentences(lines.join("\n")).map(normLine).filter(Boolean);
+    return { title: title || (sentences[0] || "").slice(0, 14), sentences };
+  }).filter(s => s.sentences.length);
+}
+
+let bVoiceList = [], bDefaults = null;
+const bChecked = id => [...document.querySelectorAll(`#${id} input:checked`)].map(i => i.value);
+// 같은 문장 · 목소리 · 억양 · 속도가 이미 있거나 대기 중이면 다시 만들지 않음
+const bHave = (text, o) => genItems.some(i => i.status !== "error" && i.text === text && i.voice === o.voice && i.style === o.style && Math.abs(i.speed - o.speed) < 0.001);
+
+function bPlan() {
+  const scripts = parseScripts($("bText").value);
+  const voicesSel = bChecked("bVoices"), styles = bChecked("bStyles"), speed = +$("bSpeed").value;
+  const jobs = [];
+  for (const sc of scripts) for (const voice of voicesSel) for (const st of styles) {
+    const o = { voice, style: st, speed };
+    const lines = [...new Set(sc.sentences)].filter(l => !bHave(l, o));
+    const vl = (bVoiceList.find(v => v.id === voice) || { label: voice }).label.replace(/^녹음: /, "").slice(0, 12);
+    jobs.push({ o, lines, total: sc.sentences.length, tag: `🌙 ${sc.title} · ${vl} · ${STYLE_NAMES[st]} · ${speed}배` });
+  }
+  return { scripts, versions: voicesSel.length * styles.length, jobs };
+}
+
+function bInfo() {
+  const { scripts, versions, jobs } = bPlan();
+  const lines = jobs.reduce((a, j) => a + j.lines.length, 0), all = jobs.reduce((a, j) => a + j.total, 0);
+  const chars = jobs.reduce((a, j) => a + j.lines.reduce((b, l) => b + l.length, 0), 0);
+  $("bInfo").textContent = !scripts.length ? "대본을 넣어 주세요." : !versions ? "목소리와 억양을 하나 이상 골라 주세요." :
+    `대본 ${scripts.length}편 × 버전 ${versions}개 → 새로 만들 문장 ${lines}개` + (all > lines ? ` (이미 있는 ${all - lines}개는 건너뜀)` : "") +
+    (lines ? ` · 예상 약 ${fmtWait(chars * secPerChar())}` : "");
+  $("bGo").disabled = !lines;
+}
+
+async function bLoadVoices() {
+  const r = await api("GET", "/api/tts/voices");
+  bVoiceList = r.voices; bDefaults = r.defaults;
+  const keep = new Set(bChecked("bVoices").length ? bChecked("bVoices") : [r.defaults.voice]);
+  $("bVoices").innerHTML = "";
+  for (const v of r.voices) {
+    const l = document.createElement("label");
+    l.innerHTML = `<input type="checkbox" value="${escapeHtml(v.id)}" ${keep.has(v.id) ? "checked" : ""}> <span></span>`;
+    l.querySelector("span").textContent = v.label;
+    $("bVoices").appendChild(l);
+  }
+  bInfo();
+}
+
+$("bText").value = pref("batchDraft") || "";
+$("bText").addEventListener("input", () => { pref("batchDraft", $("bText").value); bInfo(); });
+$("batchView").addEventListener("change", bInfo);
+document.querySelector('nav.tabs [data-tab="batch"]').addEventListener("click", () => bLoadVoices().catch(() => {}));
+bLoadVoices().catch(() => {});
+
+$("bGo").addEventListener("click", async () => {
+  const { jobs } = bPlan();
+  const todo = jobs.filter(j => j.lines.length);
+  if (!todo.length || !bDefaults) return;
+  $("bGo").disabled = true;
+  const d = bDefaults;
+  try {
+    for (const j of todo) {
+      await api("POST", "/api/tts/generate", { text: j.lines.join("\n"), pitch: d.pitch, gap: d.gap, denoise: d.denoise,
+        calm_exclaim: d.calm_exclaim, ...j.o, tag: j.tag });
+    }
+    alert(`${todo.length}개 버전을 대기열에 걸었어요. 서버 창은 켜 두세요.`);
+  } catch (e) { alert("대기열에 걸지 못했어요: " + e.message); }
+  await refreshGen();
+});
+
+function renderBatch() {
+  if (!$("bGroups")) return;
+  const groups = new Map();
+  for (const it of genItems) if (it.tag && it.tag.startsWith("🌙")) {
+    if (!groups.has(it.tag)) groups.set(it.tag, []);
+    groups.get(it.tag).push(it);
+  }
+  const box = $("bGroups");
+  if (!groups.size) { box.innerHTML = '<div class="empty">아직 걸어 둔 버전이 없어요.</div>'; bInfo(); return; }
+  box.innerHTML = "";
+  for (const [tag, items] of groups) {
+    const n = s => items.filter(i => i.status === s).length;
+    const done = n("done"), err = n("error"), total = items.length;
+    const el = document.createElement("div");
+    el.className = "bg";
+    el.innerHTML = `<div><div class="tag"></div><div class="meta">${done} / ${total} 완료${n("generating") ? " · 🎙 만드는 중" : n("queued") ? " · ⏳ 대기 중" : ""}${err ? ` · <span class="err">오류 ${err}</span>` : ""}</div></div>
+      <div class="acts"><button data-act="zip" ${done ? "" : "disabled"}>⬇ 저장</button> <button data-act="del" title="이 버전 지우기">✕</button></div>
+      <div class="bar"><i style="width:${(done / total) * 100}%"></i></div>`;
+    el.querySelector(".tag").textContent = tag;
+    el.querySelector('[data-act="zip"]').addEventListener("click", () => bZip(tag, items));
+    el.querySelector('[data-act="del"]').addEventListener("click", async () => {
+      if (!confirm(`이 버전의 음성 ${total}개를 지울까요? (만드는 중인 한 줄은 남아요)\n\n${tag}`)) return;
+      await api("POST", "/api/tts/delete", { ids: items.map(i => i.id) }); refreshGen();
+    });
+    box.appendChild(el);
+  }
+  bInfo();
+}
+
+// 문장 순서대로 01_, 02_ … 이름을 붙여 저장 → 편집기 「녹음 파일 넣기」에 그대로 넣어도 순서가 맞아요
+async function bZip(tag, items) {
+  const done = items.filter(i => i.status === "done").sort((a, b) => a.created - b.created);
+  const files = fileNames(done).map((f, k) => ({ id: f.id, name: `${String(k + 1).padStart(2, "0")}_${f.name}` }));
+  const r = await fetch("/api/tts/zip", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ files }) });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(await r.blob());
+  a.download = tag.replace(/^🌙\s*/, "").replace(/[\\/:*?"<>|·]+/g, "").trim().replace(/\s+/g, "_") + ".zip";
+  document.body.appendChild(a); a.click(); a.remove();  // 페이지에 붙여야 파일 이름이 지켜짐
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+}
 
 refreshGen();
 

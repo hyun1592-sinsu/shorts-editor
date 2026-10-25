@@ -644,3 +644,4 @@ body.mode-both .layout { grid-template-columns: 260px minmax(0, 1fr) 320px 420px
 .ex-error ol { margin: 6px 0 0; padding-left: 18px; }
 .panel-head { flex-wrap: wrap; row-gap: 6px; }
 .panel-head h2 { white-space: nowrap; }
+.rec-src { padding: 5px 6px; font-size: 12px; font-weight: 600; }

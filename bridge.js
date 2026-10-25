@@ -10,13 +10,16 @@
    ========================================================= */
 
 const BRIDGE_VER = 1;
-const REC_URL_KEY = 'shorts-rec-url';
+const STUDIO_URL_KEY = 'shorts-rec-url'; // 내 목소리 스튜디오 주소 (기기마다 따로 저장)
+const REC_SRC_KEY = 'shorts-rec-src';   // 같이 쓰기 · 녹음만에 여는 녹음기: quick | studio
 const REC_MODE_KEY = 'shorts-rec-mode';
-const REC_URL_DEFAULT = 'http://127.0.0.1:8777/'; // 내 목소리 스튜디오 (PC에서 recorder/server.py 실행)
+const STUDIO_URL_DEFAULT = 'http://127.0.0.1:8777/'; // PC에서 recorder/server.py를 켠 주소
+const QUICK_REC_URL = 'recorder/quick.html';         // 간편 녹음기: 서버 없이 어느 기기에서나
 
 const R = {
   mode: 'edit',
   popup: null,
+  popupUrl: '',
   peers: new Set(), // hello를 보낸 창
   lastSig: '',
   fromRemote: false,
@@ -25,7 +28,10 @@ const R = {
 function lsGet(k, d) { try { return localStorage.getItem(k) || d; } catch (e) { return d; } }
 function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* 저장 못 해도 동작은 함 */ } }
 
-const recUrl = () => lsGet(REC_URL_KEY, REC_URL_DEFAULT);
+const studioUrl = () => lsGet(STUDIO_URL_KEY, STUDIO_URL_DEFAULT);
+const recSrc = () => (lsGet(REC_SRC_KEY, 'quick') === 'studio' ? 'studio' : 'quick');
+const recUrl = () => (recSrc() === 'studio' ? studioUrl() : new URL(QUICK_REC_URL, location.href).href);
+const recName = () => (recSrc() === 'studio' ? '스튜디오' : '녹음기');
 function recOrigin() {
   try {
     const o = new URL(recUrl(), location.href).origin;
@@ -155,9 +161,11 @@ function updateRecLink() {
   const on = R.peers.size > 0;
   const opened = !!(frameWin() || popupWin());
   el.dataset.state = on ? 'on' : opened ? 'wait' : 'off';
-  el.textContent = on ? '녹음기 연결됨' : opened ? '녹음기 기다리는 중' : '녹음기 꺼짐';
+  el.textContent = on ? `${recName()} 연결됨` : opened ? `${recName()} 기다리는 중` : '녹음기 꺼짐';
   el.title = on ? '대본과 녹음 파일이 자동으로 오가요' :
-    opened ? `${recUrl()} 에서 응답이 없어요. PC에서 스튜디오 서버(server.py)가 켜져 있는지 확인해 주세요.` :
+    opened ? (recSrc() === 'studio'
+      ? `${recUrl()} 에서 응답이 없어요. 스튜디오 서버(server.py)가 켜져 있는지, ⚙의 주소가 맞는지 확인해 주세요.`
+      : '간편 녹음기를 불러오는 중이에요.') :
       '녹음기를 쓰지 않는 중';
 }
 
@@ -188,8 +196,9 @@ function setMode(mode, { user = false } = {}) {
 
   if (mode === 'rec' && user) {
     // 팝업은 버튼을 눌렀을 때만 열 수 있음
-    if (popupWin()) popupWin().focus();
+    if (popupWin() && R.popupUrl === recUrl()) popupWin().focus();
     else {
+      R.popupUrl = recUrl();
       R.popup = window.open(recUrl(), 'shorts-recorder', 'width=520,height=860');
       if (!R.popup) toast('팝업이 막혔어요. 주소창 오른쪽에서 팝업을 허용해 주세요.', null, 5000);
     }
@@ -201,22 +210,41 @@ function setMode(mode, { user = false } = {}) {
   updateRecLink();
 }
 
-function changeRecUrl() {
-  const now = recUrl();
-  const v = prompt('내 목소리 스튜디오 주소를 넣어 주세요.\n기본값: http://127.0.0.1:8777/  (PC에서 server.py를 켠 주소)\n비워 두고 확인하면 기본값으로 돌아가요.', now);
-  if (v == null) return;
-  let url;
-  if (!v.trim()) { lsSet(REC_URL_KEY, ''); if (R.mode === 'both') { closeFrame(); openFrame(); } updateRecLink(); toast('기본 녹음기로 돌아갔어요.'); return; }
-  try { url = new URL(v.trim(), location.href).href; } catch (e) { toast('주소 모양이 올바르지 않아요.'); return; }
-  lsSet(REC_URL_KEY, url);
+/* 녹음기를 바꾸면 열려 있는 칸·창도 새 녹음기로 */
+function reopenRecorder(user) {
   if (R.mode === 'both') { closeFrame(); openFrame(); }
+  if (R.mode === 'rec' && user) setMode('rec', { user: true });
   updateRecLink();
-  toast('녹음기 주소를 바꿨어요.');
+}
+
+function setRecSrc(src, { user = false } = {}) {
+  lsSet(REC_SRC_KEY, src);
+  $('#recSrc').value = src;
+  reopenRecorder(user);
+}
+
+function changeStudioUrl() {
+  const now = studioUrl();
+  const v = prompt('내 목소리 스튜디오 주소를 넣어 주세요. (이 기기에만 저장돼요)\n\n'
+    + '· 스튜디오를 켠 PC에서: http://127.0.0.1:8777/\n'
+    + '· 다른 기기(휴대폰·노트북)에서: Tailscale 주소 예) https://내PC이름.tailXXXX.ts.net/\n\n'
+    + '비워 두고 확인하면 기본값으로 돌아가요.', now);
+  if (v == null) return;
+  if (!v.trim()) lsSet(STUDIO_URL_KEY, '');
+  else {
+    let url;
+    try { url = new URL(v.trim(), location.href).href; } catch (e) { toast('주소 모양이 올바르지 않아요.'); return; }
+    lsSet(STUDIO_URL_KEY, url);
+  }
+  if (recSrc() === 'studio') reopenRecorder(false);
+  toast(`스튜디오 주소: ${studioUrl()}`);
 }
 
 function bindBridge() {
   $$('.mode-switch button').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.mode, { user: true })));
-  $('#recSettings').addEventListener('click', changeRecUrl);
+  $('#recSettings').addEventListener('click', changeStudioUrl);
+  $('#recSrc').value = recSrc();
+  $('#recSrc').addEventListener('change', (e) => setRecSrc(e.target.value, { user: true }));
   $('#recFrame').addEventListener('load', () => { setTimeout(updateRecLink, 1500); });
   setInterval(updateRecLink, 2000); // 녹음만 창을 닫았는지 확인
   const saved = lsGet(REC_MODE_KEY, 'edit');

@@ -310,7 +310,17 @@ def load_model():
 
 # ---------- worker ----------
 
+def _keep_awake(on):
+    """Windows: keep the PC from sleeping while lines are queued (overnight batches). Screen may still turn off."""
+    if os.name != "nt":
+        return
+    import ctypes
+    ES_CONTINUOUS, ES_SYSTEM_REQUIRED = 0x80000000, 0x00000001
+    ctypes.windll.kernel32.SetThreadExecutionState(ES_CONTINUOUS | (ES_SYSTEM_REQUIRED if on else 0))
+
+
 def _worker():
+    _keep_awake(True)  # loading the model already counts as work
     try:
         engine = Engine(load_model())
         _state["model"] = "ready"
@@ -319,7 +329,10 @@ def _worker():
         raise
 
     while True:
+        if _jobs.empty():
+            _keep_awake(False)
         item_id = _jobs.get()
+        _keep_awake(True)
         with _lock:
             it = next((dict(i) for i in _items if i["id"] == item_id), None)
         if not it or it["status"] != "queued":

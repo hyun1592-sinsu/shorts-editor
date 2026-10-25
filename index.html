@@ -30,7 +30,11 @@
     <button type="button" data-mode="rec">녹음만</button>
   </div>
   <div class="top-right">
-    <button type="button" id="recSettings" class="btn ghost small" title="내 목소리 스튜디오 주소 바꾸기">녹음기 ⚙</button>
+    <select id="recSrc" class="rec-src" title="같이 쓰기 · 녹음만에서 열 녹음기" aria-label="녹음기 고르기">
+      <option value="quick">간편 녹음기</option>
+      <option value="studio">내 목소리 스튜디오</option>
+    </select>
+    <button type="button" id="recSettings" class="btn ghost small" title="내 목소리 스튜디오 주소 (이 기기)">⚙</button>
     <span id="recLink" class="rec-link" data-state="off" title="녹음기 연결 상태">녹음기 꺼짐</span>
     <span id="saveStatus" class="save-status" data-state="saved">자동 저장됨</span>
     <button type="button" id="openProject" class="btn ghost" title="저장해 둔 프로젝트 zip 열기">불러오기</button>
@@ -322,7 +326,7 @@
     <div class="panel-head">
       <h2>장면 <span id="sceneCount" class="muted"></span></h2>
       <div class="row" style="margin:0">
-        <button type="button" id="mvOpen" class="btn small mv-open" title="PC의 내 목소리 스튜디오로 장면 문장을 내 목소리로 읽혀 넣어요">🎙 내 목소리</button>
+        <button type="button" id="mvOpen" class="btn small mv-open" title="내 목소리 AI · 브라우저 목소리 · 직접 녹음 중에서 골라 장면에 입혀요">🎙 목소리 입히기</button>
         <button type="button" id="voiceBatch" class="btn small" title="녹음 파일 여러 개를 파일 이름 순서대로 1번 문장부터 차례로 넣어요">녹음 파일 넣기</button>
         <button type="button" id="addScene" class="btn small">+ 장면 추가</button>
       </div>
@@ -331,7 +335,7 @@
   </aside>
   <!-- 같이 쓰기: 녹음기를 오른쪽에 붙여 씀 -->
   <aside id="recDock" class="rec-dock" hidden>
-    <iframe id="recFrame" title="내 목소리 스튜디오" allow="microphone; autoplay; local-network-access; loopback-network; local-network"></iframe>
+    <iframe id="recFrame" title="녹음기" allow="microphone; autoplay; local-network-access; loopback-network; local-network"></iframe>
   </aside>
 </main>
 
@@ -339,29 +343,32 @@
 <input type="file" id="filePicker" accept="image/*,video/*" hidden>
 <input type="file" id="voicePicker" accept="audio/*,.mp3,.wav,.m4a,.ogg,.aac,.flac" multiple hidden>
 
-<!-- 내 목소리로 읽기 (PC의 내 목소리 스튜디오) -->
+<!-- 목소리 입히기: 내 목소리 AI · 브라우저 목소리 · 직접 녹음 -->
 <div class="modal" id="mvModal" hidden>
   <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="mvTitle">
-    <h3 id="mvTitle">내 목소리로 읽기</h3>
+    <h3 id="mvTitle">목소리 입히기</h3>
 
     <div id="mvSetup">
-      <p class="mv-lead">PC에서 켜 둔 <b>내 목소리 스튜디오</b>가 장면 문장을 내 목소리로 읽어 파일로 만들고, 다 되면 장면마다 자동으로 넣어요.</p>
+      <p class="mv-lead">장면에 입힐 목소리를 골라요. <b>내 목소리 AI</b>는 스튜디오가 만들어 장면마다 자동으로 넣고, 밤새 만들어 둔 음성이 있으면 바로 가져와요. 장면마다 다른 목소리를 입혀도 돼요.</p>
       <div class="field"><label for="mvVoice">목소리</label><select id="mvVoice"></select></div>
-      <div class="field"><label for="mvStyle">억양</label>
-        <select id="mvStyle"><option value="calm">차분</option><option value="normal">보통</option><option value="rich">풍부</option></select>
-      </div>
-      <div class="field"><label for="mvSpeed">속도</label>
-        <select id="mvSpeed"><option value="0.95">0.95배 (느리게)</option><option value="1">1.00배</option><option value="1.05">1.05배 (기본)</option><option value="1.1">1.10배</option><option value="1.2">1.20배 (빠르게)</option></select>
+      <div id="mvAiOpts">
+        <div class="field"><label for="mvStyle">억양</label>
+          <select id="mvStyle"><option value="calm">차분</option><option value="normal">보통</option><option value="rich">풍부</option></select>
+        </div>
+        <div class="field"><label for="mvSpeed">속도</label>
+          <select id="mvSpeed"><option value="0.95">0.95배 (느리게)</option><option value="1">1.00배</option><option value="1.05">1.05배 (기본)</option><option value="1.1">1.10배</option><option value="1.2">1.20배 (빠르게)</option></select>
+        </div>
       </div>
       <div class="ex-voice">
         <label class="chk"><input type="radio" name="mvScope" value="missing" checked> 목소리가 없는 장면만 <span class="muted small" id="mvMissing"></span></label>
-        <label class="chk"><input type="radio" name="mvScope" value="all"> 모든 장면 새로 만들기 <span class="muted small" id="mvAll"></span></label>
+        <label class="chk"><input type="radio" name="mvScope" value="all"> 모든 장면 <span class="muted small" id="mvAll"></span></label>
+        <label class="chk"><input type="radio" name="mvScope" value="selected"> 선택한 장면만 <span class="muted small" id="mvSel"></span></label>
       </div>
       <p class="ex-sum" id="mvSummary"></p>
       <div class="ex-error" id="mvError" hidden></div>
       <div class="row end">
         <button type="button" class="btn ghost" data-mv="close">닫기</button>
-        <button type="button" class="btn primary" id="mvStart">만들기 시작</button>
+        <button type="button" class="btn primary" id="mvStart">목소리 입히기</button>
       </div>
     </div>
 

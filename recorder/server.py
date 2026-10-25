@@ -184,6 +184,8 @@ async def tts_generate(request: Request):
         "denoise": bool(body.get("denoise", d["denoise"])),
         "calm_exclaim": bool(body.get("calm_exclaim", d["calm_exclaim"])),
         "voice": voice,
+        # Label that groups lines, e.g. one script × one voice version from the overnight batch tab.
+        "tag": str(body.get("tag", ""))[:120],
     }
     return {"items": tts.enqueue(lines, opts)}
 
