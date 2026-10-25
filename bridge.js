@@ -11,7 +11,7 @@
 
 const BRIDGE_VER = 1;
 const STUDIO_URL_KEY = 'shorts-rec-url'; // 기본 목소리 서버 주소 (기기마다 따로 저장)
-const REC_SRC_KEY = 'shorts-rec-src';   // 같이 쓰기 · 녹음만에 여는 녹음기: quick | studio
+const REC_SRC_KEY = 'shorts-rec-src';   // 같이 쓰기 · 녹음만에 여는 화면: quick(직접 녹음) | studio(기본 목소리). 목소리 입히기에서 고른 대로 바뀜
 const REC_MODE_KEY = 'shorts-rec-mode';
 const STUDIO_URL_DEFAULT = 'http://127.0.0.1:8777/'; // PC에서 recorder/server.py를 켠 주소
 const QUICK_REC_URL = 'recorder/quick.html';         // 직접 녹음: 서버 없이 어느 기기에서나
@@ -218,8 +218,8 @@ function reopenRecorder(user) {
 }
 
 function setRecSrc(src, { user = false } = {}) {
+  if (src === recSrc()) return; // 이미 그 화면이면 다시 불러오지 않음
   lsSet(REC_SRC_KEY, src);
-  $('#recSrc').value = src;
   reopenRecorder(user);
 }
 
@@ -243,8 +243,6 @@ function changeStudioUrl() {
 function bindBridge() {
   $$('.mode-switch button').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.mode, { user: true })));
   $('#recSettings').addEventListener('click', changeStudioUrl);
-  $('#recSrc').value = recSrc();
-  $('#recSrc').addEventListener('change', (e) => setRecSrc(e.target.value, { user: true }));
   $('#recFrame').addEventListener('load', () => { setTimeout(updateRecLink, 1500); });
   setInterval(updateRecLink, 2000); // 녹음만 창을 닫았는지 확인
   const saved = lsGet(REC_MODE_KEY, 'edit');

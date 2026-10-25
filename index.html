@@ -30,11 +30,7 @@
     <button type="button" data-mode="rec">녹음만</button>
   </div>
   <div class="top-right">
-    <select id="recSrc" class="rec-src" title="같이 쓰기 · 녹음만에서 열 녹음기" aria-label="녹음기 고르기">
-      <option value="quick">직접 녹음</option>
-      <option value="studio">기본 목소리</option>
-    </select>
-    <button type="button" id="recSettings" class="btn ghost small" title="기본 목소리 주소 (이 기기)">⚙</button>
+    <button type="button" id="recSettings" class="btn ghost small" title="기본 목소리 서버 주소 (이 기기)">⚙</button>
     <span id="recLink" class="rec-link" data-state="off" title="녹음기 연결 상태">녹음기 꺼짐</span>
     <span id="saveStatus" class="save-status" data-state="saved">자동 저장됨</span>
     <button type="button" id="openProject" class="btn ghost" title="저장해 둔 프로젝트 zip 열기">불러오기</button>
@@ -352,6 +348,7 @@
       <p class="mv-lead">장면에 입힐 목소리를 골라요. <b>기본 목소리</b>는 AI가 내 목소리로 만들어 장면마다 자동으로 넣고, 미리 만들어 둔 음성이 있으면 바로 가져와요. <b>직접 녹음</b>은 내가 말한 그대로 들어가요. <b>자동 AI 목소리</b>는 컴퓨터·휴대폰에 들어 있는 목소리(내 목소리 아님)가 바로 읽어요. 장면마다 다른 목소리를 입혀도 돼요.</p>
       <div class="field"><label for="mvVoice">목소리</label><select id="mvVoice"></select></div>
       <div id="mvAiOpts">
+        <p class="mv-studio">AI가 따라 할 내 목소리를 늘리거나(AI 학습 녹음), 대본 여러 편을 미리 만들어 두려면(밤샘 일괄) <button type="button" class="btn small" id="mvOpenStudio">기본 목소리 화면 열기</button></p>
         <div class="field"><label for="mvStyle">억양</label>
           <select id="mvStyle"><option value="calm">차분</option><option value="normal">보통</option><option value="rich">풍부</option></select>
         </div>

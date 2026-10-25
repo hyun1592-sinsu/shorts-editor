@@ -640,6 +640,8 @@ body.mode-both .layout { grid-template-columns: var(--w-left, 260px) minmax(0, 1
 
 /* ---------- 내 목소리로 읽기 ---------- */
 .mv-lead { margin: 0 0 12px; font-size: 13px; line-height: 1.6; color: #c9cede; }
+.mv-studio { margin: 0 0 8px; font-size: 12px; line-height: 1.7; color: var(--muted); }
+.mv-studio .btn { margin-left: 4px; }
 .mv-open.busy { border-color: var(--accent); color: var(--text); }
 .ex-error ol { margin: 6px 0 0; padding-left: 18px; }
 .panel-head { flex-wrap: wrap; row-gap: 6px; }

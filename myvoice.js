@@ -99,8 +99,7 @@ function mvFillVoices() {
 
   const rec = document.createElement('optgroup');
   rec.label = '직접 녹음';
-  rec.append(new Option('직접 녹음 (어느 기기에서나)', 'rec:quick'));
-  rec.append(new Option('기본 목소리 화면에서 녹음', 'rec:studio'));
+  rec.append(new Option('직접 녹음 · 내가 말한 그대로 장면에 (어느 기기에서나)', 'rec:quick'));
   sel.append(rec);
 
   const ok = (v) => [...sel.options].some((o) => o.value === v && !o.disabled);
@@ -131,7 +130,7 @@ function mvSummary() {
     msg = `${list.length}개 장면을 이 기기의 자동 AI 목소리로 읽어요. 이미 넣은 녹음·AI 음성은 이 장면들에서 빠져요.` +
       ' MP4로 내보낼 때는 컴퓨터에서 화면 공유로 소리를 녹음해요.';
   } else if (kind === 'rec') {
-    msg = `${mvChoice() === 'rec:studio' ? '기본 목소리 화면' : '직접 녹음 화면'}을 편집기 옆에 열어요. 문장을 골라 녹음하면 그 장면에 바로 들어가요.`;
+    msg = '직접 녹음 화면을 편집기 옆에 열어요. 문장을 골라 녹음하면 그 장면에 바로 들어가요.';
   }
   $('#mvSummary').textContent = msg;
   $('#mvStart').disabled = !list.length || (kind === 'ai' && !MV.studio);
@@ -198,6 +197,7 @@ async function startMyVoice() {
   if (kind === 'rec') return mvOpenRecorder(targets);
   if (!MV.studio) return;
 
+  setRecSrc('studio'); // 이후 「같이 쓰기」는 기본 목소리 화면으로
   const o = mvAiOpts();
   const opts = { ...MV.studio.defaults, ...o };
   const entries = targets.map((sc) => {
@@ -250,7 +250,7 @@ function mvUseBrowserVoice(targets) {
 }
 
 function mvOpenRecorder(targets) {
-  setRecSrc(mvChoice() === 'rec:studio' ? 'studio' : 'quick');
+  setRecSrc('quick');
   if (!targets.some((sc) => sc.id === state.selectedId)) selectScene(targets[0].id, { scroll: true });
   setMode('both', { user: true });
   closeMyVoice();
@@ -365,6 +365,7 @@ function bindMyVoice() {
   $('#mvOpen').addEventListener('click', openMyVoice);
   $('#mvStart').addEventListener('click', startMyVoice);
   $('#mvCancel').addEventListener('click', cancelMyVoice);
+  $('#mvOpenStudio').addEventListener('click', () => { setRecSrc('studio'); setMode('both', { user: true }); closeMyVoice(); });
   $('#mvVoice').addEventListener('change', () => mvOnChoice());
   $('#mvStyle').addEventListener('change', mvSummary);
   $('#mvSpeed').addEventListener('change', mvSummary);

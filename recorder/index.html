@@ -17,8 +17,8 @@
   body { margin: 0; background: var(--bg); color: var(--text);
     font-family: "Pretendard", "Malgun Gothic", system-ui, sans-serif; }
   nav.tabs { display: flex; gap: 4px; padding: 10px 24px 0; border-bottom: 1px solid var(--line); background: var(--panel); }
-  nav.tabs button { white-space: nowrap; flex: none; border: 0; border-bottom: 3px solid transparent; border-radius: 0; background: none; padding: 10px 16px 12px;
-    font-size: 16px; font-weight: 600; color: var(--muted); }
+  nav.tabs button { white-space: nowrap; flex: none; border: 0; border-bottom: 3px solid transparent; border-radius: 0; background: none; padding: 8px 12px 9px;
+    font-size: 13px; font-weight: 600; color: var(--muted); }
   nav.tabs button.on { color: var(--text); border-bottom-color: var(--accent); }
   [hidden] { display: none !important; }
   .app { display: grid; grid-template-columns: 1fr 320px; min-height: calc(100vh - 52px); }
@@ -120,7 +120,7 @@
     .app, .gen { grid-template-columns: 1fr; }
     .gen { padding: 16px; }
     nav.tabs { padding: 6px 8px 0; gap: 0; overflow-x: auto; }
-    nav.tabs button { padding: 8px 10px 10px; font-size: 15px; }
+    nav.tabs button { padding: 7px 8px 8px; font-size: 12px; }
     .panel { padding: 16px; border-radius: 14px; }
     .slider { grid-template-columns: 56px 1fr auto auto; gap: 8px; font-size: 14px; }
     main { padding: 16px; }
@@ -131,8 +131,8 @@
 </head>
 <body>
 <nav class="tabs">
-  <button data-tab="gen">음성 만들기</button>
-  <button data-tab="rec">녹음하기</button>
+  <button data-tab="gen" title="글을 넣어 AI가 내 목소리 파일을 만들어요">AI 음성 만들기</button>
+  <button data-tab="rec" title="AI가 따라 할 내 목소리를 녹음해요. 이 녹음은 영상에 들어가지 않아요">AI 학습 녹음</button>
   <button data-tab="batch">🌙 밤샘 일괄</button>
 </nav>
 
@@ -698,7 +698,7 @@ function renderGen(model = lastModel) {
   lineInfo();
 
   const box = $("items");
-  if (!genItems.length) { box.innerHTML = '<div class="empty">아직 만든 음성이 없어요.<br>왼쪽에 글을 넣고 “음성 만들기”를 눌러 보세요.</div>'; }
+  if (!genItems.length) { box.innerHTML = '<div class="empty">아직 만든 음성이 없어요.<br>왼쪽에 글을 넣고 “음성 만들기”를 눌러 보세요.<br>숏츠 편집기의 🎙 목소리 입히기를 쓰면 여기서 따로 만들 필요 없이 장면에 바로 들어가요.</div>'; }
   else {
     // Keep existing rows (and their playing <audio>) when nothing about them changed.
     const old = new Map([...box.querySelectorAll(".gi")].map(el => [el.dataset.id, el]));
