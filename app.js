@@ -764,7 +764,7 @@ function clearVoice(sc) {
   renderTimeline();
   renderStage();
   save();
-  toast(`${sceneIndex(sc.id) + 1}번 장면의 녹음을 빼고 브라우저 목소리로 읽어요.`);
+  toast(`${sceneIndex(sc.id) + 1}번 장면의 녹음을 빼고 자동 AI 목소리로 읽어요.`);
 }
 
 function sfxName(src) {
@@ -1702,7 +1702,7 @@ function sceneCard(sc, i, selId) {
       <span class="vr-ico">${ICON.mic}</span>
       <span class="vr-label"></span>
       <button type="button" class="mbtn" data-act="voice-file"></button>
-      <button type="button" class="mbtn" data-act="voice-tts" title="녹음 파일을 빼고 브라우저 목소리로 읽어요">녹음 빼기</button>
+      <button type="button" class="mbtn" data-act="voice-tts" title="녹음 파일을 빼고 자동 AI 목소리로 읽어요">녹음 빼기</button>
     </div>
     <div class="media-row">
       <div class="thumb"></div>
@@ -1846,8 +1846,8 @@ function refreshCardOpts(card, sc, i) {
     $('.vr-name', vl).textContent = `${sc.voice.name} · ${sc.voice.dur.toFixed(1)}초`;
     vl.title = sc.voice.name;
   } else {
-    vl.textContent = '브라우저 목소리로 읽음';
-    vl.title = '이 장면엔 아직 녹음이 없어서 브라우저 목소리가 읽어요. 🎙 목소리 입히기나 녹음 파일 넣기로 바꿀 수 있어요.';
+    vl.textContent = '자동 AI 목소리로 읽음';
+    vl.title = '이 장면엔 아직 녹음이 없어서 자동 AI 목소리가 읽어요. 🎙 목소리 입히기나 녹음 파일 넣기로 바꿀 수 있어요.';
   }
   const vf = $('[data-act="voice-file"]', vr);
   vf.hidden = !!sc.silent;

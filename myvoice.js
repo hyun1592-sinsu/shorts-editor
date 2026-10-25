@@ -5,7 +5,7 @@
    장면에 입힐 목소리를 한곳에서 고름:
    - 기본 목소리: 기본 목소리 서버(recorder/server.py)가 장면 문장을 내 목소리 WAV로 만들어 장면마다 넣음.
                   서버에 이미 만들어 둔 같은 문장·같은 목소리(밤샘 일괄 등)가 있으면 새로 만들지 않고 바로 가져옴
-   - 브라우저 목소리: 이 기기의 음성 읽기(TTS)로 읽음 (녹음 파일을 뺀 장면은 브라우저 목소리로 돌아감)
+   - 자동 AI 목소리: 이 기기의 음성 읽기(TTS)로 읽음 (녹음 파일을 뺀 장면은 자동 AI 목소리로 돌아감)
    - 직접 녹음: 직접 녹음 화면(recorder/quick.html) · 기본 목소리 화면을 편집기 옆에 열어 녹음하면 장면에 바로 들어감
    적용 범위: 목소리가 없는 장면만 · 모든 장면 · 선택한 장면만
    ========================================================= */
@@ -53,7 +53,7 @@ function mvOfflineHelp() {
       <li>다른 기기라면 위쪽 <b>⚙</b>에 그 PC의 Tailscale 주소를 넣어 주세요.</li>
       <li>브라우저가 <b>「로컬 네트워크의 기기에 접근」</b>을 물으면 <b>허용</b>을 눌러 주세요.</li>
     </ol>
-    직접 녹음 · 브라우저 목소리는 서버 없이도 쓸 수 있어요.`;
+    직접 녹음 · 자동 AI 목소리는 서버 없이도 쓸 수 있어요.`;
 }
 
 /* ---------------- 고른 것 읽기 ---------------- */
@@ -92,7 +92,7 @@ function mvFillVoices() {
   sel.append(ai);
 
   const tts = document.createElement('optgroup');
-  tts.label = '브라우저 목소리 · 이 기기';
+  tts.label = '자동 AI 목소리 · 이 기기에 들어 있는 목소리';
   tts.append(new Option('자동 선택', 'tts:'));
   for (const v of filteredVoices()) tts.append(new Option(`${v.name.replace(/^Microsoft\s+/, '')} (${v.lang})`, 'tts:' + v.voiceURI));
   sel.append(tts);
@@ -128,7 +128,7 @@ function mvSummary() {
     msg = `${list.length}개 장면` + (made ? ` · 만들어 둔 음성 ${made}개 바로 사용` : '') +
       (chars ? ` · 새로 만들기 예상 약 ${mvWait(chars * MV.secPerChar)} (PC 성능에 따라 달라요)` : '');
   } else if (kind === 'tts') {
-    msg = `${list.length}개 장면을 이 기기의 브라우저 목소리로 읽어요. 이미 넣은 녹음·AI 음성은 이 장면들에서 빠져요.` +
+    msg = `${list.length}개 장면을 이 기기의 자동 AI 목소리로 읽어요. 이미 넣은 녹음·AI 음성은 이 장면들에서 빠져요.` +
       ' MP4로 내보낼 때는 컴퓨터에서 화면 공유로 소리를 녹음해요.';
   } else if (kind === 'rec') {
     msg = `${mvChoice() === 'rec:studio' ? '기본 목소리 화면' : '직접 녹음 화면'}을 편집기 옆에 열어요. 문장을 골라 녹음하면 그 장면에 바로 들어가요.`;
@@ -245,7 +245,7 @@ function mvUseBrowserVoice(targets) {
   save();
   closeMyVoice();
   const v = pickVoice();
-  toast(`브라우저 목소리 「${v ? v.name.replace(/^Microsoft\s+/, '') : '자동'}」로 읽어요.` +
+  toast(`자동 AI 목소리 「${v ? v.name.replace(/^Microsoft\s+/, '') : '자동'}」로 읽어요.` +
     (cleared ? ` ${cleared}개 장면의 녹음을 뺐어요.` : ''), null, 4500);
 }
 

@@ -737,7 +737,7 @@ async function runExport(opts) {
     let narration = null, tl;
     if (!ttsNeeded() && opts.voice !== 'none') {
       opts.voice = 'none';
-      notes.push('모든 문장이 녹음 파일이라 브라우저 목소리 녹음 없이 만들었어요.');
+      notes.push('모든 문장이 녹음 파일이라 자동 AI 목소리 녹음 없이 만들었어요.');
     }
     if (opts.voice === 'record') {
       exUI.step('record', '목소리를 실제로 읽으며 녹음하는 중… (실시간, 다른 소리가 나지 않게 해 주세요)');
@@ -767,7 +767,7 @@ async function runExport(opts) {
     exUI.step('video', `영상 만드는 중… (${W}×${H}, ${opts.fps}fps)`);
     const { blob, audioCodec } = await encodeMp4({ W, H, fps: opts.fps, tl, mix, onProgress: (p, txt) => exUI.progress(p, txt) });
     if (audioCodec === 'opus') notes.push('이 브라우저가 AAC 인코딩을 지원하지 않아 소리를 Opus로 넣었어요. 일부 플레이어(아이폰 기본 앱 등)에서는 소리가 안 날 수 있어요.');
-    if (!narration && ttsNeeded()) notes.push('브라우저 목소리 없이 만들었어요.');
+    if (!narration && ttsNeeded()) notes.push('자동 AI 목소리 없이 만들었어요.');
     exUI.done(blob, tl.total, W, H, notes);
   } catch (e) {
     if (e instanceof Cancelled) exUI.cancelled();

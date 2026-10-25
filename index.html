@@ -63,7 +63,7 @@
     </section>
 
     <section class="sec">
-      <h2>브라우저 목소리</h2>
+      <h2>자동 AI 목소리</h2>
       <div class="field">
         <label for="voiceLang">언어</label>
         <select id="voiceLang" data-bind="voice.lang">
@@ -326,7 +326,7 @@
     <div class="panel-head">
       <h2>장면 <span id="sceneCount" class="muted"></span></h2>
       <div class="row" style="margin:0">
-        <button type="button" id="mvOpen" class="btn small mv-open" title="기본 목소리 · 직접 녹음 · 브라우저 목소리 중에서 골라 장면에 입혀요">🎙 목소리 입히기</button>
+        <button type="button" id="mvOpen" class="btn small mv-open" title="기본 목소리 · 직접 녹음 · 자동 AI 목소리 중에서 골라 장면에 입혀요">🎙 목소리 입히기</button>
         <button type="button" id="voiceBatch" class="btn small" title="녹음 파일 여러 개를 파일 이름 순서대로 1번 문장부터 차례로 넣어요">녹음 파일 넣기</button>
         <button type="button" id="addScene" class="btn small">+ 장면 추가</button>
       </div>
@@ -343,13 +343,13 @@
 <input type="file" id="filePicker" accept="image/*,video/*" hidden>
 <input type="file" id="voicePicker" accept="audio/*,.mp3,.wav,.m4a,.ogg,.aac,.flac" multiple hidden>
 
-<!-- 목소리 입히기: 내 목소리 AI · 브라우저 목소리 · 직접 녹음 -->
+<!-- 목소리 입히기: 기본 목소리 · 자동 AI 목소리 · 직접 녹음 -->
 <div class="modal" id="mvModal" hidden>
   <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="mvTitle">
     <h3 id="mvTitle">목소리 입히기</h3>
 
     <div id="mvSetup">
-      <p class="mv-lead">장면에 입힐 목소리를 골라요. <b>기본 목소리</b>는 AI가 내 목소리로 만들어 장면마다 자동으로 넣고, 미리 만들어 둔 음성이 있으면 바로 가져와요. <b>직접 녹음</b>은 내가 말한 그대로 들어가요. 장면마다 다른 목소리를 입혀도 돼요.</p>
+      <p class="mv-lead">장면에 입힐 목소리를 골라요. <b>기본 목소리</b>는 AI가 내 목소리로 만들어 장면마다 자동으로 넣고, 미리 만들어 둔 음성이 있으면 바로 가져와요. <b>직접 녹음</b>은 내가 말한 그대로 들어가요. <b>자동 AI 목소리</b>는 컴퓨터·휴대폰에 들어 있는 목소리(내 목소리 아님)가 바로 읽어요. 장면마다 다른 목소리를 입혀도 돼요.</p>
       <div class="field"><label for="mvVoice">목소리</label><select id="mvVoice"></select></div>
       <div id="mvAiOpts">
         <div class="field"><label for="mvStyle">억양</label>
@@ -399,13 +399,13 @@
         <select id="exFps"><option value="30">30fps</option><option value="60">60fps (더 부드럽지만 2배 오래 걸림)</option></select>
       </div>
       <div class="ex-voice">
-        <label class="chk"><input type="radio" name="exVoice" value="record" checked> 브라우저 목소리를 녹음해서 넣기</label>
+        <label class="chk"><input type="radio" name="exVoice" value="record" checked> 자동 AI 목소리를 녹음해서 넣기</label>
         <label class="chk"><input type="radio" name="exVoice" value="reuse"> 방금 녹음한 목소리 다시 쓰기 <span class="muted small" id="exReuseNote"></span></label>
-        <label class="chk"><input type="radio" name="exVoice" value="none"> 브라우저 목소리 없이 (녹음 파일 · 효과음 · 영상 소리만)</label>
-        <p class="note-plain" id="exVoiceNote" hidden>모든 문장에 녹음 파일이 들어 있어서 브라우저 목소리 녹음이 필요 없어요. 녹음 파일은 그대로 영상에 들어가요.</p>
+        <label class="chk"><input type="radio" name="exVoice" value="none"> 자동 AI 목소리 없이 (녹음 파일 · 효과음 · 영상 소리만)</label>
+        <p class="note-plain" id="exVoiceNote" hidden>모든 문장에 녹음 파일이 들어 있어서 자동 AI 목소리 녹음이 필요 없어요. 녹음 파일은 그대로 영상에 들어가요.</p>
       </div>
       <div class="ex-help" id="exHelp">
-        <b>브라우저 목소리는 파일로 받을 수 없어서,</b> 내보내는 동안 미리보기처럼 실제로 끝까지 읽게 하고 그 소리를 녹음해 넣어요.
+        <b>자동 AI 목소리는 파일로 받을 수 없어서,</b> 내보내는 동안 미리보기처럼 실제로 끝까지 읽게 하고 그 소리를 녹음해 넣어요.
         <ol>
           <li><b>내보내기 시작</b>을 누르면 화면 공유 창이 떠요.</li>
           <li>위쪽에서 <b>「전체 화면」</b>을 고르고, 아래쪽 <b>「시스템 오디오도 공유」</b>를 켠 뒤 <b>공유</b>를 누르세요.</li>
