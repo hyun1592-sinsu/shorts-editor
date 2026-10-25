@@ -10,3 +10,6 @@ desktop.ini
 *.mp3
 *.m4a
 *.ogg
+# 파이썬 실행 때 생기는 임시 파일
+__pycache__/
+*.pyc

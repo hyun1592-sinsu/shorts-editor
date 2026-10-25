@@ -12,7 +12,7 @@
 const BRIDGE_VER = 1;
 const REC_URL_KEY = 'shorts-rec-url';
 const REC_MODE_KEY = 'shorts-rec-mode';
-const REC_URL_DEFAULT = 'recorder/'; // 같은 저장소 안의 녹음기 (GitHub 페이지에서도 같은 주소로 열림)
+const REC_URL_DEFAULT = 'http://127.0.0.1:8777/'; // 내 목소리 스튜디오 (PC에서 recorder/server.py 실행)
 
 const R = {
   mode: 'edit',
@@ -157,7 +157,7 @@ function updateRecLink() {
   el.dataset.state = on ? 'on' : opened ? 'wait' : 'off';
   el.textContent = on ? '녹음기 연결됨' : opened ? '녹음기 기다리는 중' : '녹음기 꺼짐';
   el.title = on ? '대본과 녹음 파일이 자동으로 오가요' :
-    opened ? `${recUrl()} 에서 녹음기가 응답하지 않아요. 녹음기가 켜져 있는지, 연결 파일(recorder-bridge.js)이 붙어 있는지 확인해 주세요.` :
+    opened ? `${recUrl()} 에서 응답이 없어요. PC에서 스튜디오 서버(server.py)가 켜져 있는지 확인해 주세요.` :
       '녹음기를 쓰지 않는 중';
 }
 
@@ -203,7 +203,7 @@ function setMode(mode, { user = false } = {}) {
 
 function changeRecUrl() {
   const now = recUrl();
-  const v = prompt('녹음기 주소를 넣어 주세요.\n기본값: recorder/  (이 편집기 저장소 안의 녹음기)\n비워 두고 확인하면 기본값으로 돌아가요.', now);
+  const v = prompt('내 목소리 스튜디오 주소를 넣어 주세요.\n기본값: http://127.0.0.1:8777/  (PC에서 server.py를 켠 주소)\n비워 두고 확인하면 기본값으로 돌아가요.', now);
   if (v == null) return;
   let url;
   if (!v.trim()) { lsSet(REC_URL_KEY, ''); if (R.mode === 'both') { closeFrame(); openFrame(); } updateRecLink(); toast('기본 녹음기로 돌아갔어요.'); return; }

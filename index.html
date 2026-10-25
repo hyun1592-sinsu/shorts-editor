@@ -30,7 +30,7 @@
     <button type="button" data-mode="rec">녹음만</button>
   </div>
   <div class="top-right">
-    <button type="button" id="recSettings" class="btn ghost small" title="녹음기 주소 바꾸기">녹음기 ⚙</button>
+    <button type="button" id="recSettings" class="btn ghost small" title="내 목소리 스튜디오 주소 바꾸기">녹음기 ⚙</button>
     <span id="recLink" class="rec-link" data-state="off" title="녹음기 연결 상태">녹음기 꺼짐</span>
     <span id="saveStatus" class="save-status" data-state="saved">자동 저장됨</span>
     <button type="button" id="openProject" class="btn ghost" title="저장해 둔 프로젝트 zip 열기">불러오기</button>
@@ -322,6 +322,7 @@
     <div class="panel-head">
       <h2>장면 <span id="sceneCount" class="muted"></span></h2>
       <div class="row" style="margin:0">
+        <button type="button" id="mvOpen" class="btn small mv-open" title="PC의 내 목소리 스튜디오로 장면 문장을 내 목소리로 읽혀 넣어요">🎙 내 목소리</button>
         <button type="button" id="voiceBatch" class="btn small" title="녹음 파일 여러 개를 파일 이름 순서대로 1번 문장부터 차례로 넣어요">녹음 파일 넣기</button>
         <button type="button" id="addScene" class="btn small">+ 장면 추가</button>
       </div>
@@ -330,13 +331,53 @@
   </aside>
   <!-- 같이 쓰기: 녹음기를 오른쪽에 붙여 씀 -->
   <aside id="recDock" class="rec-dock" hidden>
-    <iframe id="recFrame" title="녹음기" allow="microphone; autoplay"></iframe>
+    <iframe id="recFrame" title="내 목소리 스튜디오" allow="microphone; autoplay; local-network-access; loopback-network; local-network"></iframe>
   </aside>
 </main>
 
 <div id="toast" class="toast" hidden><span id="toastMsg"></span><button type="button" id="toastAct" class="toast-act" hidden></button></div>
 <input type="file" id="filePicker" accept="image/*,video/*" hidden>
 <input type="file" id="voicePicker" accept="audio/*,.mp3,.wav,.m4a,.ogg,.aac,.flac" multiple hidden>
+
+<!-- 내 목소리로 읽기 (PC의 내 목소리 스튜디오) -->
+<div class="modal" id="mvModal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="mvTitle">
+    <h3 id="mvTitle">내 목소리로 읽기</h3>
+
+    <div id="mvSetup">
+      <p class="mv-lead">PC에서 켜 둔 <b>내 목소리 스튜디오</b>가 장면 문장을 내 목소리로 읽어 파일로 만들고, 다 되면 장면마다 자동으로 넣어요.</p>
+      <div class="field"><label for="mvVoice">목소리</label><select id="mvVoice"></select></div>
+      <div class="field"><label for="mvStyle">억양</label>
+        <select id="mvStyle"><option value="calm">차분</option><option value="normal">보통</option><option value="rich">풍부</option></select>
+      </div>
+      <div class="field"><label for="mvSpeed">속도</label>
+        <select id="mvSpeed"><option value="0.95">0.95배 (느리게)</option><option value="1">1.00배</option><option value="1.05">1.05배 (기본)</option><option value="1.1">1.10배</option><option value="1.2">1.20배 (빠르게)</option></select>
+      </div>
+      <div class="ex-voice">
+        <label class="chk"><input type="radio" name="mvScope" value="missing" checked> 목소리가 없는 장면만 <span class="muted small" id="mvMissing"></span></label>
+        <label class="chk"><input type="radio" name="mvScope" value="all"> 모든 장면 새로 만들기 <span class="muted small" id="mvAll"></span></label>
+      </div>
+      <p class="ex-sum" id="mvSummary"></p>
+      <div class="ex-error" id="mvError" hidden></div>
+      <div class="row end">
+        <button type="button" class="btn ghost" data-mv="close">닫기</button>
+        <button type="button" class="btn primary" id="mvStart">만들기 시작</button>
+      </div>
+    </div>
+
+    <div id="mvRun" hidden>
+      <p class="ex-phase" id="mvPhase"></p>
+      <div class="ex-bar"><i id="mvBar"></i></div>
+      <div class="row between">
+        <span id="mvPct" class="muted small"></span>
+        <span class="row" style="margin:0">
+          <button type="button" class="btn ghost" data-mv="close" title="창만 닫고 계속 만들어요">숨기기</button>
+          <button type="button" class="btn" id="mvCancel">멈추기</button>
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- MP4 내보내기 -->
 <div class="modal" id="exportModal" hidden>
@@ -463,5 +504,6 @@
 <script src="project.js"></script>
 <script src="videoedit.js"></script>
 <script src="bridge.js"></script>
+<script src="myvoice.js"></script>
 </body>
 </html>

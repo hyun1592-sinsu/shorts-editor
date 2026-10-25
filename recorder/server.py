@@ -3,6 +3,10 @@
 Run: .venv\\Scripts\\python.exe recorder\\server.py  ->  http://127.0.0.1:8777
 Recordings land in dataset/wavs/<id>.wav, transcripts in dataset/metadata.csv.
 Generated speech lands in outputs/ (see tts.py).
+
+The shorts editor (GitHub Pages or http://localhost:8765) talks to this server directly:
+it reads voices, queues scene lines with /api/tts/generate and fetches the finished WAVs.
+Only the origins in EDITOR_ORIGINS may call it from another page; every other site is refused.
 """
 import csv
 import io
@@ -15,7 +19,7 @@ from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, PlainTextResponse, Response
 
 import tts
 
@@ -28,6 +32,35 @@ METADATA = DATASET / "metadata.csv"
 WAVS.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI()
+
+# Pages allowed to use this server from the browser (the shorts editor). Same-origin requests
+# (the dashboard itself at http://127.0.0.1:8777) carry no foreign Origin and are always allowed.
+EDITOR_ORIGINS = {
+    "https://hyun1592-sinsu.github.io",
+    "http://localhost:8765",
+    "http://127.0.0.1:8765",
+}
+SELF_ORIGINS = {"http://127.0.0.1:8777", "http://localhost:8777"}
+
+
+@app.middleware("http")
+async def editor_cors(request: Request, call_next):
+    origin = request.headers.get("origin")
+    if origin and origin not in EDITOR_ORIGINS and origin not in SELF_ORIGINS:
+        # Blocks other websites from writing recordings or queueing speech on this PC.
+        return PlainTextResponse("origin not allowed", status_code=403)
+    if request.method == "OPTIONS" and origin in EDITOR_ORIGINS:
+        resp = Response(status_code=204)
+    else:
+        resp = await call_next(request)
+    if origin in EDITOR_ORIGINS:
+        resp.headers["Access-Control-Allow-Origin"] = origin
+        resp.headers["Vary"] = "Origin"
+        resp.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+        resp.headers["Access-Control-Allow-Headers"] = "Content-Type"
+        # Chrome/Edge ask before a public site (github.io) reaches 127.0.0.1; this answers that check.
+        resp.headers["Access-Control-Allow-Private-Network"] = "true"
+    return resp
 
 
 def load_sentences():
@@ -71,6 +104,11 @@ def write_metadata(recs):
 @app.get("/")
 def index():
     return FileResponse(ROOT / "index.html")
+
+
+@app.get("/recorder-bridge.js")
+def recorder_bridge():
+    return FileResponse(ROOT / "recorder-bridge.js", media_type="text/javascript")
 
 
 @app.get("/api/state")
