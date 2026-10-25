@@ -17,7 +17,7 @@
   body { margin: 0; background: var(--bg); color: var(--text);
     font-family: "Pretendard", "Malgun Gothic", system-ui, sans-serif; }
   nav.tabs { display: flex; gap: 4px; padding: 10px 24px 0; border-bottom: 1px solid var(--line); background: var(--panel); }
-  nav.tabs button { border: 0; border-bottom: 3px solid transparent; border-radius: 0; background: none; padding: 10px 16px 12px;
+  nav.tabs button { white-space: nowrap; flex: none; border: 0; border-bottom: 3px solid transparent; border-radius: 0; background: none; padding: 10px 16px 12px;
     font-size: 16px; font-weight: 600; color: var(--muted); }
   nav.tabs button.on { color: var(--text); border-bottom-color: var(--accent); }
   [hidden] { display: none !important; }
@@ -119,7 +119,10 @@
   @media (max-width: 860px) {
     .app, .gen { grid-template-columns: 1fr; }
     .gen { padding: 16px; }
-    nav.tabs { padding: 6px 8px 0; }
+    nav.tabs { padding: 6px 8px 0; gap: 0; overflow-x: auto; }
+    nav.tabs button { padding: 8px 10px 10px; font-size: 15px; }
+    .panel { padding: 16px; border-radius: 14px; }
+    .slider { grid-template-columns: 56px 1fr auto auto; gap: 8px; font-size: 14px; }
     main { padding: 16px; }
     .card { padding: 24px 20px; }
     aside { position: static; max-height: 50vh; border-left: 0; border-top: 1px solid var(--line); }
