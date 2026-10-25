@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>내 목소리 스튜디오</title>
+<title>기본 목소리</title>
 <style>
   :root {
     --bg: #f6f5f2; --panel: #ffffff; --text: #1d1d1f; --muted: #6e6e73; --line: #e3e1dc;
@@ -139,16 +139,26 @@
     <textarea id="genText" placeholder="여기에 글을 넣으세요.&#10;엔터로 줄을 나누면 줄마다 파일이 하나씩 만들어집니다."></textarea>
     <div class="note" id="lineInfo">0줄 → 파일 0개</div>
     <button id="fromEditor" hidden title="숏츠 편집기의 장면 문장을 한 줄씩 넣어요">📥 편집기 대본 가져오기</button>
-    <div class="slider"><span>속도</span><input type="range" id="speed" min="0.8" max="1.3" step="0.01" value="1.05"><output id="speedOut">1.05배</output><button data-reset="speed">기본</button></div>
+    <div class="slider"><span>속도</span><input type="range" id="speed" min="0.8" max="1.3" step="0.01" value="1"><output id="speedOut">1.00배</output><button data-reset="speed">기본</button></div>
     <div class="slider"><span>높낮이</span><input type="range" id="pitch" min="-6" max="6" step="0.5" value="0"><output id="pitchOut">0</output><button data-reset="pitch">기본</button></div>
-    <div class="slider"><span>문장 사이</span><input type="range" id="gap" min="0.05" max="0.6" step="0.05" value="0.25"><output id="gapOut">0.25초</output><button data-reset="gap">기본</button></div>
+    <div class="slider"><span>문장 사이</span><input type="range" id="gap" min="0.05" max="0.6" step="0.05" value="0.3"><output id="gapOut">0.30초</output><button data-reset="gap">기본</button></div>
     <div class="slider"><span>억양</span>
       <div class="seg" id="style"><button data-v="calm">차분</button><button data-v="normal">보통</button><button data-v="rich">풍부</button></div>
       <span></span><span></span></div>
     <div class="slider"><span>목소리</span><select id="voice"></select><span></span><span></span></div>
+    <details class="lex" id="refBox">
+      <summary>기준 목소리 추가 <span class="note">— 가지고 있는 녹음 파일로 목소리 만들기</span></summary>
+      <div class="note">10~20초, 조용한 곳에서 <b>말하듯</b> 녹음한 파일이 가장 좋아요. 녹음에서 한 말을 <b>글자 그대로</b> 대본에 적어 주세요. 대본을 비우면 목소리 색깔만 따라 해서 덜 비슷해요.</div>
+      <div class="slider"><span>이름</span><input type="text" id="refName" placeholder="예) 밝은톤" maxlength="40"><span></span><span></span></div>
+      <div class="slider"><span>파일</span><input type="file" id="refFile" accept="audio/*,.wav,.mp3,.m4a,.flac,.ogg,.webm,.aac"><span></span><span></span></div>
+      <textarea id="refText" spellcheck="false" placeholder="녹음에서 한 말을 그대로 적어 주세요."></textarea>
+      <div class="toolbar"><span class="note" id="refMsg"></span><span class="spacer"></span><button id="refSave">목소리 추가</button></div>
+      <div id="refList"></div>
+    </details>
     <div class="toolbar">
-      <label><input type="checkbox" id="denoise" checked> 잡음 제거</label>
-      <label><input type="checkbox" id="calm_exclaim" checked> 느낌표를 자연스럽게 읽기</label>
+      <label title="여러 문장을 따로 만들어 붙이지 않고 한 번에 읽어 억양이 자연스럽게 이어져요"><input type="checkbox" id="whole" checked> 한 번에 읽기</label>
+      <label title="기준 녹음의 잡음만 지워요 (만든 음성에는 손대지 않음)"><input type="checkbox" id="denoise" checked> 기준 녹음 잡음 제거</label>
+      <label title="켜면 느낌표를 마침표처럼 차분하게 읽어요"><input type="checkbox" id="calm_exclaim"> 느낌표를 차분하게</label>
     </div>
     <details class="lex">
       <summary>읽기 사전 <span class="note">— 영어·약어를 한글 발음으로 바꿔 읽어요</span></summary>
@@ -181,7 +191,7 @@
     <div class="slider"><span>억양</span><div class="checks" id="bStyles">
       <label><input type="checkbox" value="calm"> 차분</label><label><input type="checkbox" value="normal" checked> 보통</label><label><input type="checkbox" value="rich"> 풍부</label>
     </div><span></span><span></span></div>
-    <div class="slider"><span>속도</span><select id="bSpeed"><option value="0.95">0.95배</option><option value="1">1.00배</option><option value="1.05" selected>1.05배 (기본)</option><option value="1.1">1.10배</option><option value="1.2">1.20배</option></select><span></span><span></span></div>
+    <div class="slider"><span>속도</span><select id="bSpeed"><option value="0.95">0.95배</option><option value="1" selected>1.00배 (기본)</option><option value="1.05">1.05배</option><option value="1.1">1.10배</option><option value="1.2">1.20배</option></select><span></span><span></span></div>
     <div class="note" id="bInfo"></div>
     <button class="go" id="bGo">🌙 대기열에 걸기</button>
     <div class="note">작업이 남아 있는 동안 PC가 절전 모드로 들어가지 않아요 (화면은 꺼져도 돼요). 이 페이지는 닫아도 되지만 <b>서버 창은 켜 두세요.</b></div>
@@ -500,7 +510,14 @@ try { showTab(localStorage.getItem("tab") || "gen"); } catch { showTab("gen"); }
 // ---- 음성 만들기 ----
 let genItems = [], selected = new Set(), seen = null, genPlayer = null, pollTimer = null;
 const playQueue = [];
-const DEFAULTS = { speed: 1.05, pitch: 0, gap: 0.25 };
+const DEFAULTS = { speed: 1, pitch: 0, gap: 0.3 };
+// 자연스러운 목소리 기본값으로 바뀐 뒤 처음 열 때, 예전에 저장된 속도·억양·느낌표 설정을 한 번 지움
+try {
+  if (localStorage.getItem("naturalDefaults") !== "1") {
+    for (const k of ["speed", "gap", "style", "calm_exclaim"]) localStorage.removeItem(k);
+    localStorage.setItem("naturalDefaults", "1");
+  }
+} catch {}
 const STYLE_NAMES = { calm: "차분", normal: "보통", rich: "풍부" };
 
 function pref(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch {} }
@@ -518,7 +535,7 @@ function sliderLabels() {
   $("gapOut").textContent = `${(+$("gap").value).toFixed(2)}초`;
 }
 sliderLabels();
-for (const k of ["autoPlay", "denoise", "calm_exclaim"]) {
+for (const k of ["autoPlay", "denoise", "calm_exclaim", "whole"]) {
   const v = pref(k); if (v === "0" || v === "1") $(k).checked = v === "1";
   $(k).addEventListener("change", e => pref(k, e.target.checked ? "1" : "0"));
 }
@@ -536,6 +553,48 @@ async function loadVoices() {
   sel.value = voices.some(v => v.id === want) ? want : "A";
 }
 $("voice").addEventListener("change", e => pref("voice", e.target.value));
+
+// ---- 기준 목소리 추가: 가지고 있는 녹음 파일 + 그 대본 → voices/ 폴더 ----
+async function renderRefList() {
+  const { voices } = await api("GET", "/api/tts/voices");
+  const box = $("refList");
+  box.innerHTML = "";
+  for (const v of voices.filter(v => v.id.startsWith("file:"))) {
+    const row = document.createElement("div");
+    row.className = "toolbar";
+    row.innerHTML = `<span class="spacer"></span><button data-act="del" title="이 기준 목소리 지우기">✕</button>`;
+    const t = document.createElement("span"); t.textContent = v.label; row.prepend(t);
+    row.querySelector("button").addEventListener("click", async () => {
+      if (!confirm(`기준 목소리 「${v.id.slice(5)}」를 지울까요? (파일도 지워져요)`)) return;
+      await api("DELETE", `/api/voices/${encodeURIComponent(v.id.slice(5))}`);
+      await loadVoices(); renderRefList();
+    });
+    box.appendChild(row);
+  }
+}
+$("refBox").addEventListener("toggle", () => { if ($("refBox").open) renderRefList().catch(() => {}); });
+$("refFile").addEventListener("change", () => {
+  const f = $("refFile").files[0];
+  if (f && !$("refName").value.trim()) $("refName").value = f.name.replace(/\.[^.]+$/, "").slice(0, 40);
+});
+$("refSave").addEventListener("click", async () => {
+  const f = $("refFile").files[0], name = $("refName").value.trim();
+  if (!f || !name) { $("refMsg").textContent = "이름과 파일을 넣어 주세요."; return; }
+  const ext = (f.name.match(/\.([^.]+)$/) || [, "wav"])[1];
+  $("refSave").disabled = true; $("refMsg").textContent = "올리는 중…";
+  try {
+    const r = await fetch(`/api/voices?name=${encodeURIComponent(name)}&ext=${encodeURIComponent(ext)}`, { method: "POST", body: f });
+    if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
+    const { id } = await r.json();
+    await api("PUT", `/api/voices/${encodeURIComponent(id.slice(5))}/text`, { text: $("refText").value });
+    await loadVoices();
+    $("voice").value = id; pref("voice", id);
+    $("refMsg").textContent = `「${name}」 목소리를 추가하고 골랐어요.`;
+    $("refFile").value = ""; $("refName").value = ""; $("refText").value = "";
+    renderRefList();
+  } catch (e) { $("refMsg").textContent = "추가하지 못했어요: " + e.message; }
+  $("refSave").disabled = false;
+});
 function voiceLabel(id) {
   const o = [...$("voice").options].find(o => o.value === id);
   return "목소리 " + (o ? o.textContent.replace(/^녹음: /, "").slice(0, 14) + "…" : id);
@@ -590,7 +649,8 @@ function lineInfo() {
 
 function genOpts() {
   return { speed: +$("speed").value, pitch: +$("pitch").value, gap: +$("gap").value, style,
-    voice: $("voice").value || "A", denoise: $("denoise").checked, calm_exclaim: $("calm_exclaim").checked };
+    voice: $("voice").value || "A", denoise: $("denoise").checked, calm_exclaim: $("calm_exclaim").checked,
+    whole: $("whole").checked };
 }
 
 async function generate() {
@@ -827,7 +887,7 @@ $("bGo").addEventListener("click", async () => {
   try {
     for (const j of todo) {
       await api("POST", "/api/tts/generate", { text: j.lines.join("\n"), pitch: d.pitch, gap: d.gap, denoise: d.denoise,
-        calm_exclaim: d.calm_exclaim, ...j.o, tag: j.tag });
+        calm_exclaim: d.calm_exclaim, whole: d.whole, ...j.o, tag: j.tag });
     }
     alert(`${todo.length}개 버전을 대기열에 걸었어요. 서버 창은 켜 두세요.`);
   } catch (e) { alert("대기열에 걸지 못했어요: " + e.message); }

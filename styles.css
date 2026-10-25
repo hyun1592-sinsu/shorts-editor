@@ -100,7 +100,7 @@ input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 4px; }
 .layout {
   height: calc(100vh - 54px);
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr) 360px;
+  grid-template-columns: var(--w-left, 300px) minmax(0, 1fr) var(--w-right, 360px);
 }
 .panel { background: var(--panel); overflow-y: auto; min-height: 0; }
 .panel.left { border-right: 1px solid var(--line); }
@@ -255,7 +255,7 @@ input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 4px; }
   background-position: 0 bottom;
 }
 .tl-ruler span { position: absolute; top: 0; font-size: 10px; color: var(--muted); transform: translateX(3px); font-variant-numeric: tabular-nums; }
-.tl-blocks { display: flex; height: 76px; margin-top: 4px; }
+.tl-blocks { display: flex; height: var(--tl-blocks-h, 76px); margin-top: 4px; }
 .tl-block {
   position: relative; flex: none; height: 100%; border-radius: 7px; overflow: hidden; cursor: pointer;
   background: #111318 center / cover no-repeat;
@@ -596,7 +596,7 @@ a.btn { text-decoration: none; display: inline-block; }
 
 /* ---------- 좁은 화면 ---------- */
 @media (max-width: 1100px) {
-  .layout { grid-template-columns: 270px minmax(0, 1fr) 310px; }
+  .layout { grid-template-columns: var(--w-left, 270px) minmax(0, 1fr) var(--w-right, 310px); }
 }
 @media (max-width: 900px) {
   body { overflow: auto; }
@@ -621,9 +621,9 @@ a.btn { text-decoration: none; display: inline-block; }
 .rec-link[data-state="on"]::before { background: var(--ok); }
 .rec-dock { background: var(--panel); border-left: 1px solid var(--line); min-height: 0; display: flex; }
 .rec-dock iframe { flex: 1; width: 100%; height: 100%; border: 0; background: #fff; }
-body.mode-both .layout { grid-template-columns: 260px minmax(0, 1fr) 320px 420px; }
+body.mode-both .layout { grid-template-columns: var(--w-left, 260px) minmax(0, 1fr) var(--w-right, 320px) var(--w-dock, 420px); }
 @media (max-width: 1500px) {
-  body.mode-both .layout { grid-template-columns: 240px minmax(0, 1fr) 290px 380px; }
+  body.mode-both .layout { grid-template-columns: var(--w-left, 240px) minmax(0, 1fr) var(--w-right, 290px) var(--w-dock, 380px); }
 }
 @media (max-width: 900px) {
   body.mode-both .layout { grid-template-columns: 1fr; }
@@ -645,3 +645,17 @@ body.mode-both .layout { grid-template-columns: 260px minmax(0, 1fr) 320px 420px
 .panel-head { flex-wrap: wrap; row-gap: 6px; }
 .panel-head h2 { white-space: nowrap; }
 .rec-src { padding: 5px 6px; font-size: 12px; font-weight: 600; }
+
+/* ---------- 화면 칸 크기 조절 (끌어서 넓히기 · 두 번 눌러 처음대로) ---------- */
+.layout, .center { position: relative; }
+.gutter { position: absolute; z-index: 20; touch-action: none; }
+.gutter::after { content: ""; position: absolute; background: transparent; transition: background .15s; }
+.gutter.col { top: 0; bottom: 0; width: 10px; margin-left: -5px; cursor: col-resize; }
+.gutter.col::after { top: 0; bottom: 0; left: 4px; width: 2px; }
+.gutter.row { left: 0; right: 0; height: 10px; margin-top: -5px; cursor: row-resize; }
+.gutter.row::after { left: 0; right: 0; top: 4px; height: 2px; }
+.gutter:hover::after, .gutter.drag::after { background: var(--accent); }
+body.resizing, body.resizing * { cursor: inherit !important; user-select: none !important; }
+body.resizing iframe { pointer-events: none; } /* 끄는 동안 녹음기 칸이 마우스를 가로채지 않게 */
+@media (max-width: 900px) { .gutter { display: none; } }
+.panel-head .row { flex-wrap: wrap; row-gap: 6px; }

@@ -10,11 +10,11 @@
    ========================================================= */
 
 const BRIDGE_VER = 1;
-const STUDIO_URL_KEY = 'shorts-rec-url'; // 내 목소리 스튜디오 주소 (기기마다 따로 저장)
+const STUDIO_URL_KEY = 'shorts-rec-url'; // 기본 목소리 서버 주소 (기기마다 따로 저장)
 const REC_SRC_KEY = 'shorts-rec-src';   // 같이 쓰기 · 녹음만에 여는 녹음기: quick | studio
 const REC_MODE_KEY = 'shorts-rec-mode';
 const STUDIO_URL_DEFAULT = 'http://127.0.0.1:8777/'; // PC에서 recorder/server.py를 켠 주소
-const QUICK_REC_URL = 'recorder/quick.html';         // 간편 녹음기: 서버 없이 어느 기기에서나
+const QUICK_REC_URL = 'recorder/quick.html';         // 직접 녹음: 서버 없이 어느 기기에서나
 
 const R = {
   mode: 'edit',
@@ -31,7 +31,7 @@ function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* 저장
 const studioUrl = () => lsGet(STUDIO_URL_KEY, STUDIO_URL_DEFAULT);
 const recSrc = () => (lsGet(REC_SRC_KEY, 'quick') === 'studio' ? 'studio' : 'quick');
 const recUrl = () => (recSrc() === 'studio' ? studioUrl() : new URL(QUICK_REC_URL, location.href).href);
-const recName = () => (recSrc() === 'studio' ? '스튜디오' : '녹음기');
+const recName = () => (recSrc() === 'studio' ? '기본 목소리' : '직접 녹음');
 function recOrigin() {
   try {
     const o = new URL(recUrl(), location.href).origin;
@@ -164,8 +164,8 @@ function updateRecLink() {
   el.textContent = on ? `${recName()} 연결됨` : opened ? `${recName()} 기다리는 중` : '녹음기 꺼짐';
   el.title = on ? '대본과 녹음 파일이 자동으로 오가요' :
     opened ? (recSrc() === 'studio'
-      ? `${recUrl()} 에서 응답이 없어요. 스튜디오 서버(server.py)가 켜져 있는지, ⚙의 주소가 맞는지 확인해 주세요.`
-      : '간편 녹음기를 불러오는 중이에요.') :
+      ? `${recUrl()} 에서 응답이 없어요. 기본 목소리 서버(server.py)가 켜져 있는지, ⚙의 주소가 맞는지 확인해 주세요.`
+      : '직접 녹음 화면을 불러오는 중이에요.') :
       '녹음기를 쓰지 않는 중';
 }
 
@@ -225,8 +225,8 @@ function setRecSrc(src, { user = false } = {}) {
 
 function changeStudioUrl() {
   const now = studioUrl();
-  const v = prompt('내 목소리 스튜디오 주소를 넣어 주세요. (이 기기에만 저장돼요)\n\n'
-    + '· 스튜디오를 켠 PC에서: http://127.0.0.1:8777/\n'
+  const v = prompt('기본 목소리 주소를 넣어 주세요. (이 기기에만 저장돼요)\n\n'
+    + '· 기본 목소리 서버를 켠 PC에서: http://127.0.0.1:8777/\n'
     + '· 다른 기기(휴대폰·노트북)에서: Tailscale 주소 예) https://내PC이름.tailXXXX.ts.net/\n\n'
     + '비워 두고 확인하면 기본값으로 돌아가요.', now);
   if (v == null) return;
@@ -237,7 +237,7 @@ function changeStudioUrl() {
     lsSet(STUDIO_URL_KEY, url);
   }
   if (recSrc() === 'studio') reopenRecorder(false);
-  toast(`스튜디오 주소: ${studioUrl()}`);
+  toast(`기본 목소리 주소: ${studioUrl()}`);
 }
 
 function bindBridge() {

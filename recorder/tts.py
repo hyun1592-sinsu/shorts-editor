@@ -1,7 +1,11 @@
 """Background TTS worker: queue lines, generate with Qwen3-TTS voice clone, post-process with ffmpeg.
 
-Each line is split into sentences that are generated separately, then joined with a fixed gap so pauses
-stay even. Generated items persist in outputs/history.json so the list survives restarts.
+By default a whole line is read in one go so intonation carries across sentences ("한 번에 읽기").
+The old way (each sentence generated separately, joined with a fixed gap) is still available with whole=False.
+Generated items persist in outputs/history.json so the list survives restarts.
+
+Voices: built-in clips (VOICES), any reference file in voices/ (transcript in a same-name .txt), and
+recordings from the 녹음 tab.
 """
 import csv
 import gc
@@ -27,7 +31,12 @@ LEXICON = OUT / "lexicon.json"
 DATASET = ROOT / "dataset"
 OUT.mkdir(exist_ok=True)
 
-# Built-in reference clips. Recordings from the 녹음 tab are offered as voices too (id "rec:<sentence id>").
+VOICE_DIR = ROOT / "voices"
+VOICE_DIR.mkdir(exist_ok=True)
+AUDIO_EXT = {".wav", ".mp3", ".m4a", ".flac", ".ogg", ".webm", ".aac"}
+
+# Built-in reference clips. Reference files dropped in voices/ are voices too (id "file:<name>"),
+# and so are recordings from the 녹음 tab (id "rec:<sentence id>").
 VOICES = {
     "A": {"label": "기본 (녹음 2번 앞부분)", "wav": ROOT / "voices" / "my_voice_2.wav", "start": 0.5, "end": 9.9,
           "text": "이번 주말 어디 갈지 아직 못 정하셨나요? 가까운 바다로 가는 기차표 한 장이면 충분해요."},
@@ -35,13 +44,16 @@ VOICES = {
           "text": "도착하면 바닷바람 맞으며 따뜻한 커피 한 잔 마셔 보세요. 멀리 가지 않아도 쉼은 바로 거기 있습니다."},
 }
 # 억양: sampling temperature. Higher = more varied intonation, but less stable.
-STYLES = {"calm": 0.35, "normal": 0.55, "rich": 0.8}
+# Values below ~0.6 read flat and robotic; 0.9 is what the Qwen3-TTS examples use.
+STYLES = {"calm": 0.7, "normal": 0.85, "rich": 1.0}
+TOP_K = 50
 DEFAULT_LEXICON = [
     ["YouTube", "유튜브"], ["Shorts", "쇼츠"], ["AI", "에이아이"], ["OK", "오케이"], ["SNS", "에스엔에스"],
     ["TV", "티비"], ["PC", "피씨"], ["vlog", "브이로그"], ["iPhone", "아이폰"], ["Instagram", "인스타그램"],
 ]
-DEFAULT_OPTS = {"speed": 1.05, "pitch": 0.0, "gap": 0.25, "style": "normal", "denoise": True,
-                "calm_exclaim": True, "voice": "A"}
+# speed 1.0 / pitch 0 skip resampling entirely; denoise cleans only the reference clip, never the output.
+DEFAULT_OPTS = {"speed": 1.0, "pitch": 0.0, "gap": 0.3, "style": "normal", "denoise": True,
+                "calm_exclaim": False, "whole": True, "voice": "A"}
 
 FFMPEG = shutil.which("ffmpeg") or os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\WinGet\Links\ffmpeg.exe")
 DENOISE = "highpass=f=70,afftdn=nr=12:nf=-50:tn=1"
@@ -83,8 +95,22 @@ def set_lexicon(pairs):
     LEXICON.write_text(json.dumps(pairs, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def voice_files():
+    """Reference clips in voices/ that aren't already built-in voices: {name: (audio path, transcript or None)}."""
+    builtin = {Path(v["wav"]).name for v in VOICES.values()}
+    out = {}
+    for p in sorted(VOICE_DIR.iterdir()):
+        if p.suffix.lower() in AUDIO_EXT and p.name not in builtin:
+            txt = p.with_suffix(".txt")
+            text = txt.read_text(encoding="utf-8").strip() if txt.exists() else ""
+            out[p.stem] = (p, text or None)
+    return out
+
+
 def list_voices():
     out = [{"id": k, "label": v["label"]} for k, v in VOICES.items()]
+    for name, (_, text) in voice_files().items():
+        out.append({"id": "file:" + name, "label": f"기준: {name}" + ("" if text else " (대본 없음)"), "text": text or ""})
     meta = DATASET / "metadata.csv"
     if meta.exists():
         with meta.open(encoding="utf-8", newline="") as f:
@@ -97,6 +123,9 @@ def list_voices():
 
 
 def _voice(voice_id):
+    if voice_id.startswith("file:"):
+        path, text = voice_files()[voice_id[5:]]
+        return {"wav": path, "start": 0, "end": None, "text": text}
     if voice_id.startswith("rec:"):
         sid = voice_id[4:]
         meta = DATASET / "metadata.csv"
@@ -117,7 +146,7 @@ def enqueue(lines, opts):
             _items.insert(0, it)
             new.append(it)
         _save()
-    for it in reversed(new):  # oldest line first
+    for it in new:  # lines in the order they were written
         _jobs.put(it["id"])
     _ensure_worker()
     return new
@@ -173,7 +202,7 @@ def _quiet_mask(x, sr, thresh_db=-40, frame=0.01):
     return 20 * np.log10(rms / (rms.max() + 1e-12)) < thresh_db, hop
 
 
-def tidy_sentence(x, sr, max_pause=0.15, pad=0.03):
+def tidy_sentence(x, sr, max_pause=0.35, pad=0.05):
     """Trim edge silence and shorten pauses inside a sentence to at most `max_pause` seconds."""
     quiet, hop = _quiet_mask(x, sr)
     voiced = np.flatnonzero(~quiet)
@@ -215,13 +244,20 @@ def _join(chunks, sr, xfade=0.01, gap=0.0):
 
 
 def postprocess(src, dst, speed, pitch, denoise=False, lufs=-14.0):
-    """Pitch shift (semitones), tempo change, optional denoise, then two-pass loudness normalization."""
+    """Pitch shift (semitones), tempo change, optional denoise, then two-pass loudness normalization.
+
+    Each step adds a little processing colour, so steps that change nothing are left out."""
     sr = sf.info(str(src)).samplerate
     r = 2 ** (pitch / 12)
-    # asetrate shifts pitch and tempo together; atempo then corrects tempo to the requested speed.
-    base = f"asetrate={sr * r:.0f},aresample={sr},atempo={speed / r:.5f}"
+    steps = []
     if denoise:
-        base = f"{DENOISE},{base}"
+        steps.append(DENOISE)
+    if abs(pitch) > 1e-6:
+        # asetrate shifts pitch and tempo together; atempo then corrects tempo to the requested speed.
+        steps += [f"asetrate={sr * r:.0f}", f"aresample={sr}", f"atempo={speed / r:.5f}"]
+    elif abs(speed - 1) > 1e-6:
+        steps.append(f"atempo={speed:.5f}")
+    base = ",".join(steps) or "anull"
     norm = f"loudnorm=I={lufs}:TP=-1.0:LRA=11"
     probe = subprocess.run([FFMPEG, "-hide_banner", "-i", str(src), "-af", f"{base},{norm}:print_format=json",
                             "-f", "null", "-"], capture_output=True, text=True, check=True).stderr
@@ -232,9 +268,21 @@ def postprocess(src, dst, speed, pitch, denoise=False, lufs=-14.0):
                     "-af", filters, "-ar", str(sr), str(dst)], check=True)
 
 
+def _read_audio(path):
+    """Read any audio file; formats libsndfile can't open (m4a, webm …) go through ffmpeg first."""
+    try:
+        return sf.read(str(path), dtype="float32", always_2d=True)
+    except Exception:
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "ref.wav"
+            subprocess.run([FFMPEG, "-hide_banner", "-loglevel", "error", "-y", "-i", str(path), "-ac", "1", str(out)],
+                           check=True)
+            return sf.read(str(out), dtype="float32", always_2d=True)
+
+
 def load_reference(voice_id, denoise):
     v = _voice(voice_id)
-    audio, sr = sf.read(str(v["wav"]), dtype="float32", always_2d=True)
+    audio, sr = _read_audio(v["wav"])
     audio = audio.mean(axis=1)
     end = int(v["end"] * sr) if v["end"] else len(audio)
     ref = audio[int(v["start"] * sr):end]
@@ -261,16 +309,21 @@ class Engine:
         if key not in self.prompts:
             self.prompts.clear()  # keep one voice in memory; rebuilding a prompt takes only seconds
             ref, sr, text = load_reference(voice_id, denoise)
-            self.prompts[key] = self.model.create_voice_clone_prompt(ref_audio=(ref, sr), ref_text=text)
+            if text:
+                self.prompts[key] = self.model.create_voice_clone_prompt(ref_audio=(ref, sr), ref_text=text)
+            else:
+                # No transcript: copy only the voice colour (speaker embedding). Works, but less faithful.
+                self.prompts[key] = self.model.create_voice_clone_prompt(ref_audio=(ref, sr), ref_text=None,
+                                                                         x_vector_only_mode=True)
         return self.prompts[key]
 
     def synthesize(self, text, opts, lexicon, non_streaming=True):
-        """Return (audio, sr) for one line, built sentence by sentence."""
-        sentences = split_sentences(apply_lexicon(text, lexicon), opts.get("calm_exclaim", True))
-        temp = STYLES.get(opts.get("style", "normal"), 0.55)
+        """Return (audio, sr) for one line: read in one go (whole=True) or sentence by sentence."""
+        sentences = split_sentences(apply_lexicon(text, lexicon), opts.get("calm_exclaim", False))
+        temp = STYLES.get(opts.get("style", "normal"), STYLES["normal"])
         prompt = self.prompt(opts.get("voice", "A"), opts.get("denoise", False))
         kw = dict(non_streaming_mode=non_streaming,
-                  temperature=temp, top_k=20, subtalker_temperature=temp, subtalker_top_k=20)
+                  temperature=temp, top_k=TOP_K, subtalker_temperature=temp, subtalker_top_k=TOP_K)
 
         def run(sentence):
             # The default cap (2048 codec frames ≈ 170 s) lets a sentence that misses its end babble for
@@ -280,6 +333,15 @@ class Engine:
                 text=sentence, language="Korean", voice_clone_prompt=prompt, max_new_tokens=cap, **kw)
             w = np.asarray(wavs[0], dtype=np.float32)
             return w, sr, len(w) / sr >= 0.95 * cap / FRAME_RATE
+
+        if opts.get("whole", True) and len(sentences) > 1:
+            # One pass for the whole line keeps intonation flowing from sentence to sentence.
+            line = " ".join(sentences)
+            w, sr, hit_cap = run(line)
+            if not hit_cap:
+                gc.collect()
+                return tidy_sentence(w, sr, max_pause=0.6), sr
+            # It lost the end of a long line; fall back to sentence by sentence.
 
         # One sentence at a time: batching multiplies memory, and on 8 GB that means swapping.
         parts = []
@@ -344,7 +406,8 @@ def _worker():
             audio, sr = engine.synthesize(it["text"], opts, get_lexicon())
             raw = OUT / f"{item_id}_raw.wav"
             sf.write(str(raw), audio, sr)
-            postprocess(raw, wav_path(item_id), opts["speed"], opts["pitch"], opts["denoise"])
+            # denoise was already applied to the reference clip; cleaning the output again only adds artifacts
+            postprocess(raw, wav_path(item_id), opts["speed"], opts["pitch"], denoise=False)
             _update(item_id, status="done", duration=sf.info(str(wav_path(item_id))).duration,
                     took=round(time.time() - t0, 1))
         except Exception as e:  # keep the worker alive; surface the error on the item

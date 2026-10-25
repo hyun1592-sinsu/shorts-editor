@@ -183,6 +183,7 @@ async def tts_generate(request: Request):
         "style": body.get("style") if body.get("style") in tts.STYLES else d["style"],
         "denoise": bool(body.get("denoise", d["denoise"])),
         "calm_exclaim": bool(body.get("calm_exclaim", d["calm_exclaim"])),
+        "whole": bool(body.get("whole", d["whole"])),
         "voice": voice,
         # Label that groups lines, e.g. one script × one voice version from the overnight batch tab.
         "tag": str(body.get("tag", ""))[:120],
@@ -193,6 +194,61 @@ async def tts_generate(request: Request):
 @app.get("/api/tts/voices")
 def tts_voices():
     return {"voices": tts.list_voices(), "defaults": tts.DEFAULT_OPTS}
+
+
+# ---- 기준 목소리: reference clips in voices/ (+ same-name .txt transcript) ----
+
+def voice_name(raw):
+    name = re.sub(r'[\\/:*?"<>|\x00-\x1f]', "", str(raw)).strip().strip(".")[:40]
+    if not name:
+        raise HTTPException(400, "bad name")
+    return name
+
+
+@app.post("/api/voices")
+async def add_voice(request: Request, name: str, ext: str = "wav"):
+    """Body: the raw audio file. Saved as voices/<name>.<ext>; the transcript is set separately."""
+    name = voice_name(name)
+    ext = "." + re.sub(r"[^a-z0-9]", "", ext.lower())
+    if ext not in tts.AUDIO_EXT:
+        raise HTTPException(400, "unsupported audio type")
+    data = await request.body()
+    if not data or len(data) > 50 * 1024 * 1024:
+        raise HTTPException(400, "empty or too large (max 50 MB)")
+    for old in tts.VOICE_DIR.glob(f"{glob_escape(name)}.*"):
+        if old.suffix.lower() in tts.AUDIO_EXT:
+            old.unlink()
+    (tts.VOICE_DIR / f"{name}{ext}").write_bytes(data)
+    return {"id": "file:" + name}
+
+
+@app.put("/api/voices/{name}/text")
+async def set_voice_text(name: str, request: Request):
+    name = voice_name(name)
+    if name not in tts.voice_files():
+        raise HTTPException(404)
+    text = str((await request.json()).get("text", "")).strip()
+    txt = tts.VOICE_DIR / f"{name}.txt"
+    if text:
+        txt.write_text(text, encoding="utf-8")
+    else:
+        txt.unlink(missing_ok=True)
+    return {"ok": True}
+
+
+@app.delete("/api/voices/{name}")
+def delete_voice(name: str):
+    name = voice_name(name)
+    files = tts.voice_files()
+    if name not in files:
+        raise HTTPException(404)
+    files[name][0].unlink(missing_ok=True)
+    (tts.VOICE_DIR / f"{name}.txt").unlink(missing_ok=True)
+    return {"ok": True}
+
+
+def glob_escape(s):
+    return re.sub(r"([*?\[])", r"[\1]", s)
 
 
 @app.get("/api/tts/lexicon")
